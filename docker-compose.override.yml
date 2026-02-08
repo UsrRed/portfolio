@@ -1,0 +1,21 @@
+services:
+  frontend:
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/app 
+    environment:
+      - NODE_ENV=development
+
+  api:
+    ports:
+      - "4000:3000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
+  db:
+    ports:
+      - "5432:5432"

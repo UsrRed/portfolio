@@ -1,0 +1,40 @@
+version: '1.0'
+
+services:
+  frontend:
+    build: 
+      context: ./frontend
+    networks:
+      - portfolio-network
+
+  api:
+    build: 
+      context: ./backend
+    networks:
+      - portfolio-network
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - portfolio-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  portfolio-network:
+
+volumes:
+  db_data:
+  traefik_certs:
