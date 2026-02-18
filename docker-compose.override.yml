@@ -1,11 +1,13 @@
 services:
   frontend:
     ports:
-      - "3000:80"
+      - "${PORT}:80"
     volumes:
-      - ./frontend:/app 
+      - ./frontend:/app
     environment:
       - NODE_ENV=development
+    depends_on:
+      - api
 
   api:
     volumes:
@@ -13,6 +15,9 @@ services:
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
 
   db:
     ports:

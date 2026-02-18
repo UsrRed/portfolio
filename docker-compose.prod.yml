@@ -17,9 +17,11 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`51.15.192.106.sslip.io`)"
+      - "traefik.http.routers.frontend.rule=Host(`${SERVER_IP}.sslip.io`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+    depends_on:
+      - api
 
   api:
     restart: unless-stopped
@@ -33,3 +35,6 @@ services:
       resources:
         limits:
           memory: 512M
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/structure:/docker-entrypoint-initdb.d
