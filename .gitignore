@@ -1,1 +1,4 @@
 .env
+data_export_*.tar.gz
+frontend/tsconfig.app.tsbuildinfo
+CLAUDE.md

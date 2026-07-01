@@ -19,7 +19,7 @@ WORKDIR /root/
 
 COPY --from=builder /portfolio-api .
 
-RUN adduser -D gouser
+RUN adduser -D gouser && mkdir -p /uploads && chown gouser:gouser /uploads
 USER gouser
 
 EXPOSE 3000

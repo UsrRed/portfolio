@@ -15,6 +15,11 @@ services:
 
   frontend:
     restart: unless-stopped
+    volumes:
+      - uploads:/uploads
+    build:
+      args:
+        VITE_ENABLE_ADD_PROJECT: "false"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`${SERVER_IP}.sslip.io`)"
@@ -25,9 +30,12 @@ services:
 
   api:
     restart: unless-stopped
+    volumes:
+      - uploads:/uploads
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - ENABLE_ADD_PROJECT=false
 
   db:
     restart: unless-stopped

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useDataController } from '../controllers/useDataController'
+import NavBar from '../components/NavBar.vue'
 import PresentationSection from '../components/PresentationSection.vue'
 import SkillSection from '../components/SkillSection.vue'
 import LanguageSection from '../components/LanguageSection.vue'
@@ -13,88 +14,126 @@ const { data, error, loading } = useDataController()
 </script>
 
 <template>
-  <div v-if="loading" class="text-center mt-5">
-    <div class="spinner-border text-light" role="status">
-      <span class="visually-hidden">Loading...</span>
+  <!-- Loading -->
+  <div v-if="loading" class="loading-screen">
+    <div class="spinner"></div>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">Chargement du portfolio…</p>
+  </div>
+
+  <!-- Error -->
+  <div v-else-if="error" class="error-screen">
+    <div class="error-card">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.5" style="margin-bottom:1rem">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p style="color: var(--danger); font-weight: 600;">Erreur de chargement</p>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">{{ error }}</p>
     </div>
   </div>
 
-  <div v-else-if="error" class="alert alert-danger text-center m-5">
-    {{ error }}
-  </div>
+  <!-- Main content -->
+  <div v-else-if="data">
+    <NavBar :name="data.person.first_name + ' ' + data.person.last_name" />
 
-  <div v-else-if="data" class="bg-dark text-white">
-    <!-- Navbar (Simplified version for now, could be a separate component) -->
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark shadow sticky-top">
-      <div class="container-fluid">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
+    <main>
+      <PresentationSection
+        :person="data.person"
+        @update:person="data.person = $event"
+      />
 
-        <div class="collapse navbar-collapse" id="navbarToggler">
-          <ul class="navbar-nav me-auto mt-2 mt-lg-0">
-            <li class="nav-item">
-              <a class="nav-link" href="#Presentation">Présentation</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#Competences">Compétences</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#Formations">Formations</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#Experiences">Expériences</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#projet">Projets</a>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </nav>
+      <div class="separator"></div>
 
-    <PresentationSection :person="data.person" />
-    
-    <div class="container mx-auto px-0" id="Competences">
-      <SkillSection title="Compétences" :domains="data.domains" />
-      <div class="octagon-bottom"></div>
-    </div>
+      <SkillSection :domains="data.domains" />
 
-    <LanguageSection :languages="data.languages" />
-    
-    <br/><br/>
-    
-    <HobbySection :hobbies="data.hobbies" />
-    
-    <br/><br/>
-    
-    <SoftSkillSection :softSkills="data.soft_skills" />
-    
-    <br/><br/><br/>
+      <div class="separator"></div>
 
-    <EducationSection :educations="data.educations" />
-    
-    <br/><br/><br/>
-    
-    <ExperienceSection :experiences="data.experiences" />
-    
-    <br/><br/><br/>
-    
-    <ProjectSection :projects="data.projects" />
-    
-    <br/><br/>
-    
-    <section class="text-center">
-      <p>Cliquer ci-dessous pour me contacter</p>
-      <a v-if="data.person.linkedin_url" :href="data.person.linkedin_url"><img width="100em" src="/images/LinkedIn.svg" alt="logo LinkedIn"/></a>
-    </section>
+      <LanguageSection :languages="data.languages" />
 
-    <br/><br/><br/><br/>
+      <div class="separator"></div>
 
-    <footer class="footer mt-auto py-3 bg-light text-center fixed-bottom bg-dark text-white border-top border-secondary">
-      <div class="container">
-        <span>Site web créé par {{ data.person.first_name }} {{ data.person.last_name }}<br/>Copyright {{ new Date().getFullYear() }} - Tout droits réservés</span>
+      <HobbySection :hobbies="data.hobbies" />
+
+      <div class="separator"></div>
+
+      <SoftSkillSection :soft-skills="data.soft_skills" />
+
+      <div class="separator"></div>
+
+      <EducationSection :educations="data.educations" />
+
+      <div class="separator"></div>
+
+      <ExperienceSection :experiences="data.experiences" />
+
+      <div class="separator"></div>
+
+      <ProjectSection :projects="data.projects" />
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container footer-inner">
+        <a v-if="data.person.linkedin_url" :href="data.person.linkedin_url" class="footer-linkedin" target="_blank">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/>
+            <circle cx="4" cy="4" r="2"/>
+          </svg>
+          Me contacter sur LinkedIn
+        </a>
+        <p class="footer-copy">
+          Site créé par <span class="gradient-text">{{ data.person.first_name }} {{ data.person.last_name }}</span>
+          &mdash; &copy; {{ new Date().getFullYear() }}
+        </p>
       </div>
     </footer>
   </div>
 </template>
+
+<style scoped>
+.separator {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+}
+
+.footer {
+  background: var(--bg-2, #0d0d24);
+  border-top: 1px solid var(--border);
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.footer-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.footer-linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.65rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.footer-linkedin:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-dim);
+}
+
+.footer-copy {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+</style>

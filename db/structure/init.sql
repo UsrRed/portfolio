@@ -112,7 +112,7 @@ INSERT INTO person (first_name, last_name, birth_date, driver_license, location,
 ('Yohann', 'DENOYELLE', '2003-07-01', 'Permis B et véhicule', 'Blois', 
  'Étudiant à l''IUT de Blois', 
  'Étudiant à l''IUT de Blois pour un BUT Réseaux et Télécommunications orienté cybersécurité. Stagiaire chez Senior Aerospace Ermeto. En recherche d''un apprentissage pour 2024/2027 avec l''école d''ingénieur EPITA.',
- 'https://fr.linkedin.com/in/yohann-denoyelle', '../images/Yohann.png');
+ 'https://fr.linkedin.com/in/yohann-denoyelle', '/images/Yohann.jpeg');
 
 -- Domains
 INSERT INTO domain (name) VALUES 
@@ -123,54 +123,54 @@ INSERT INTO domain (name) VALUES
 
 -- Skills: Développement
 INSERT INTO skill (domain_id, name, image_url, details) VALUES 
-((SELECT id FROM domain WHERE name='Compétences développement'), 'Python', '../images/Python.png', 'Développement de plusieurs programmes utilitaires. Obtention d''une certification Udemy'),
-((SELECT id FROM domain WHERE name='Compétences développement'), 'HTML-CSS', '../images/HTMLCSS.png', 'Développement de plusieurs projets, souvent dans le cadre scolaire'),
-((SELECT id FROM domain WHERE name='Compétences développement'), 'C', '../images/C.png', 'Entraînement dans le cadre universitaire'),
-((SELECT id FROM domain WHERE name='Compétences développement'), 'SQL', '../images/SQL.png', 'Mise en place et gestion de bases de données. Utilisé dans le projet de site web'),
-((SELECT id FROM domain WHERE name='Compétences développement'), 'Bash', '../images/BASH.png', 'Programmation sur Linux étudiée en cours'),
-((SELECT id FROM domain WHERE name='Compétences développement'), 'PHP', '../images/PHP.png', 'Mise en place de programme permettant de rendre un site dynamique, interagissant avec les données d''un serveur'),
-((SELECT id FROM domain WHERE name='Compétences développement'), 'Java', '../images/Java.png', 'Création d''une application de chat chiffré avec des sockets et des threads'),
-((SELECT id FROM domain WHERE name='Compétences développement'), 'Javascript', '../images/javascript.png', 'Création de graphiques de statistiques réalisé chez Senior Aerospace Ermeto et utilisé dans divers projets'),
-((SELECT id FROM domain WHERE name='Compétences développement'), 'Docker', '../images/docker.png', 'Création d''un site web avec une supervision PLG et syslog-ng avec un réseau Docker');
+((SELECT id FROM domain WHERE name='Compétences développement'), 'Python', '/images/Python.png', 'Développement de plusieurs programmes utilitaires. Obtention d''une certification Udemy'),
+((SELECT id FROM domain WHERE name='Compétences développement'), 'HTML-CSS', '/images/HTMLCSS.png', 'Développement de plusieurs projets, souvent dans le cadre scolaire'),
+((SELECT id FROM domain WHERE name='Compétences développement'), 'C', '/images/C.png', 'Entraînement dans le cadre universitaire'),
+((SELECT id FROM domain WHERE name='Compétences développement'), 'SQL', '/images/SQL.png', 'Mise en place et gestion de bases de données. Utilisé dans le projet de site web'),
+((SELECT id FROM domain WHERE name='Compétences développement'), 'Bash', '/images/BASH.png', 'Programmation sur Linux étudiée en cours'),
+((SELECT id FROM domain WHERE name='Compétences développement'), 'PHP', '/images/PHP.png', 'Mise en place de programme permettant de rendre un site dynamique, interagissant avec les données d''un serveur'),
+((SELECT id FROM domain WHERE name='Compétences développement'), 'Java', '/images/Java.png', 'Création d''une application de chat chiffré avec des sockets et des threads'),
+((SELECT id FROM domain WHERE name='Compétences développement'), 'Javascript', '/images/javascript.png', 'Création de graphiques de statistiques réalisé chez Senior Aerospace Ermeto et utilisé dans divers projets'),
+((SELECT id FROM domain WHERE name='Compétences développement'), 'Docker', '/images/docker.png', 'Création d''un site web avec une supervision PLG et syslog-ng avec un réseau Docker');
 
 -- Skills: Outils réseaux
 INSERT INTO skill (domain_id, name, image_url, details) VALUES 
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Microsoft Entra ID - Active Directory', '../images/active_directory.png', 'Administration d''utilisateurs sur des réseaux étudié et réalisé lors de travaux pratiques et lors de la mise en place des badges multifonctions'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Cisco Packet Tracer', '../images/Cisco-Packet-Tracer.webp', 'Réalisation de plusieurs projets de réseaux sécurisés'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Linux', '../images/linux.png', 'Bonnes bases de bash, distributions étudiées : Ubuntu, CentOS, Debian et Kali'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Windows', '../images/windows.png', 'Administration de serveurs sur Windows / configuration de clés de registre et de l''authentification durant la mise en place des badges'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Téléphonie', '../images/telephone.png', 'Configuration de téléphone analogique et VoIP'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Centreon', '../images/Centreon.png', 'Supervision de réseaux via Centreon et Nagios'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Wazuh', '../images/Wazuh.png', 'Étude du fonctionnement de Wazuh et mise en place sur différents équipements'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Wireshark', '../images/Wireshark.png', 'Utilisation de Wireshark afin d''analyser des paquets réseaux'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'VirtualBox', '../images/VirtualBox.png', 'Utilisation de VirtualBox pour la création de machines virtuelles, notamment pour des serveurs et expérimentation d''outils');
+((SELECT id FROM domain WHERE name='Outils réseaux'), 'Microsoft Entra ID - Active Directory', '/images/active_directory.png', 'Administration d''utilisateurs sur des réseaux étudié et réalisé lors de travaux pratiques et lors de la mise en place des badges multifonctions'),
+((SELECT id FROM domain WHERE name='Outils réseaux'), 'Cisco Packet Tracer', '/images/Cisco-Packet-Tracer.webp', 'Réalisation de plusieurs projets de réseaux sécurisés'),
+((SELECT id FROM domain WHERE name='Outils réseaux'), 'Linux', '/images/linux.png', 'Bonnes bases de bash, distributions étudiées : Ubuntu, CentOS, Debian et Kali'),
+((SELECT id FROM domain WHERE name='Outils réseaux'), 'Windows', '/images/windows.png', 'Administration de serveurs sur Windows / configuration de clés de registre et de l''authentification durant la mise en place des badges'),
+((SELECT id FROM domain WHERE name='Outils réseaux'), 'Téléphonie', '/images/telephone.png', 'Configuration de téléphone analogique et VoIP'),
+((SELECT id FROM domain WHERE name='Outils réseaux'), 'Centreon', '/images/Centreon.png', 'Supervision de réseaux via Centreon et Nagios'),
+((SELECT id FROM domain WHERE name='Outils réseaux'), 'Wazuh', '/images/Wazuh.png', 'Étude du fonctionnement de Wazuh et mise en place sur différents équipements'),
+((SELECT id FROM domain WHERE name='Outils réseaux'), 'Wireshark', '/images/Wireshark.png', 'Utilisation de Wireshark afin d''analyser des paquets réseaux'),
+((SELECT id FROM domain WHERE name='Outils réseaux'), 'VirtualBox', '/images/VirtualBox.png', 'Utilisation de VirtualBox pour la création de machines virtuelles, notamment pour des serveurs et expérimentation d''outils');
 
 -- Skills: Marques utilisées
 INSERT INTO skill (domain_id, name, image_url, details) VALUES 
-((SELECT id FROM domain WHERE name='Marques utilisées'), 'Cisco', '../images/Cisco.png', 'Configuration de Routeur, Switch et Firewall'),
-((SELECT id FROM domain WHERE name='Marques utilisées'), 'Ubiquiti', '../images/Ubiquiti.png', 'Configuration de Routeur, Switch et Firewall en entreprise'),
-((SELECT id FROM domain WHERE name='Marques utilisées'), 'TP-Link', '../images/TP-Link.png', 'Paramétrage de routeur et switch dans le cadre scolaire et en entreprise'),
-((SELECT id FROM domain WHERE name='Marques utilisées'), 'Linksys', '../images/Linksys.png', 'Configuration de routeurs'),
-((SELECT id FROM domain WHERE name='Marques utilisées'), 'Netgear', '../images/Netgear.png', 'Utilisation et paramétrage de switchs et routeurs');
+((SELECT id FROM domain WHERE name='Marques utilisées'), 'Cisco', '/images/Cisco.png', 'Configuration de Routeur, Switch et Firewall'),
+((SELECT id FROM domain WHERE name='Marques utilisées'), 'Ubiquiti', '/images/Ubiquiti.png', 'Configuration de Routeur, Switch et Firewall en entreprise'),
+((SELECT id FROM domain WHERE name='Marques utilisées'), 'TP-Link', '/images/TP-Link.png', 'Paramétrage de routeur et switch dans le cadre scolaire et en entreprise'),
+((SELECT id FROM domain WHERE name='Marques utilisées'), 'Linksys', '/images/Linksys.png', 'Configuration de routeurs'),
+((SELECT id FROM domain WHERE name='Marques utilisées'), 'Netgear', '/images/Netgear.png', 'Utilisation et paramétrage de switchs et routeurs');
 
 -- Languages
 INSERT INTO language (person_id, name, level, image_url, certification_url) VALUES 
-(1, 'Français', 'Langue natale', 'images/drapeau_francais.png', NULL),
-(1, 'Anglais', 'Certification B1', 'images/drapeau_anglais.png', '/docs/certification_cambridge.pdf'),
-(1, 'Espagnol', 'Des notions', 'images/drapeau_espagnol.png', NULL);
+(1, 'Français', 'Langue natale', '/images/drapeau_francais.jpeg', NULL),
+(1, 'Anglais', 'Certification B1', '/images/drapeau_anglais.jpeg', '/docs/certification_cambridge.pdf'),
+(1, 'Espagnol', 'Des notions', '/images/drapeau_espagnol.jpeg', NULL);
 
 -- Hobbies
 INSERT INTO hobby (person_id, name, image_url) VALUES 
-(1, 'Jeux vidéos', '/images/Jeux.png'),
-(1, 'Programmation', '/images/Programmation.png'),
-(1, 'Cybersécurité', '/images/Cybersecurity.png'),
-(1, 'Ping-Pong', '/images/ping-pong.png');
+(1, 'Jeux vidéos', '/images/Jeux.webp'),
+(1, 'Programmation', '/images/Programmation.webp'),
+(1, 'Cybersécurité', '/images/Cybersecurity.webp'),
+(1, 'Ping-Pong', '/images/ping-pong.webp');
 
 -- Soft Skills
 INSERT INTO soft_skill (person_id, name, image_url) VALUES 
-(1, 'Calme', '/images/Calme.png'),
-(1, 'Sérieux', '/images/Serieux.png'),
-(1, 'Investi', '/images/Investis.png');
+(1, 'Calme', '/images/Calme.webp'),
+(1, 'Sérieux', '/images/Serieux.webp'),
+(1, 'Investi', '/images/Investis.webp');
 
 -- Education
 INSERT INTO education (person_id, school, school_url, degree, details, start_date, status) VALUES 
@@ -185,9 +185,9 @@ INSERT INTO experience (person_id, company, company_url, role, details, start_da
 
 -- Projects
 INSERT INTO project (person_id, title, image_url, period, description, skills_human, skills_tech, link_url) VALUES 
-(1, 'Badges multifonctions', '/images/Badge_technologies.png', 'mars - juin 2024', 'Étude des besoins, technologies et fournisseurs existant pour la mise en place de badges multifonctions chez Senior Aerospace Ermeto. Par la suite, accompagnement du projet dans les différentes phases du déploiement.', 'Autonomie, Savoir convaincre, Force de proposition', 'Gestion de projet, Serveur de certification, Éditeur du Registre Windows, GPO (Group Policy Objects), Connexion Windows', '../index.php?page=Badge_multifonctions'),
-(1, 'Site web catalogue', '/images/Catalogue.png', 'avril - juin 2024', 'Catalogue référençant l''ensemble des produits de Senior Aerospace Ermeto avec leurs prix, schémas, et autres mesures.', 'Autonomie', 'Développement, Gestion de projet. Langages: HTML, CSS (Bootstrap), PHP, SQL, Javascript, Dockerfile', '../index.php?page=Catalogue_Ermeto'),
-(1, 'Site Web de comparaison de page Wikipedia', '/images/SAE501-502.png', '2023-2024', 'Application WEB de comparaison de page Wikipedia avec l''API MediaWiki', NULL, 'Langages: HTML, CSS (Bootstrap), PHP, SQL, Javascript. Conteneurisation Podman: Nginx/Haproxy/PHP/MySQL/Syslog-ng/Grafana/Portainer/NetData. Travail en équipe (Git)', '../index.php?page=YLN'),
-(1, 'Raccordement de fibre optique', '/images/Orange-schema-securisation.png', '2022-2023', 'Exemple de raccordement de fibre optique (FTTO) dans une entreprise', 'Relation client, autonomie', 'Planification, Gestions de projets, Bureautique, Étude d''une infrastructure réseau. Connaissance des réseaux FTTO', '../index.php?page=Raccordement_de_fibre_optique'),
-(1, 'Chat chiffré en java', '/images/SAE302.png', '2022-2023', 'Création d''un chat en java avec un serveur et des clients, permettant de communiquer entre eux sur différents salons', NULL, 'Langages: Java, SQL. Compréhension des sockets. Compréhension des threads. Travail en équipe', '../index.php?page=Chat_java'),
-(1, 'Site Web des écoles de Blois', '/images/SAE23.png', '2021-2022', 'Site permettant aux utilisateurs de voir les différentes écoles de Blois et leurs formations, ceci avec des statistiques sur chaque école. Possibilité de créer un compte afin d''envoyer des tickets aux développeurs pour de possibles améliorations.', NULL, 'Langages: HTML, CSS(Bootstrap), PHP, SQL. Travail en équipe', '../index.php?page=Schools_data');
+(1, 'Badges multifonctions', '/images/Badge_technologies.jpeg', 'mars - juin 2024', 'Étude des besoins, technologies et fournisseurs existant pour la mise en place de badges multifonctions chez Senior Aerospace Ermeto. Par la suite, accompagnement du projet dans les différentes phases du déploiement.', 'Autonomie, Savoir convaincre, Force de proposition', 'Gestion de projet, Serveur de certification, Éditeur du Registre Windows, GPO (Group Policy Objects), Connexion Windows', NULL),
+(1, 'Site web catalogue', '/images/Catalogue.png', 'avril - juin 2024', 'Catalogue référençant l''ensemble des produits de Senior Aerospace Ermeto avec leurs prix, schémas, et autres mesures.', 'Autonomie', 'Développement, Gestion de projet. Langages: HTML, CSS (Bootstrap), PHP, SQL, Javascript, Dockerfile', NULL),
+(1, 'Site Web de comparaison de page Wikipedia', '/images/SAE501-502.png', '2023-2024', 'Application WEB de comparaison de page Wikipedia avec l''API MediaWiki', NULL, 'Langages: HTML, CSS (Bootstrap), PHP, SQL, Javascript. Conteneurisation Podman: Nginx/Haproxy/PHP/MySQL/Syslog-ng/Grafana/Portainer/NetData. Travail en équipe (Git)', NULL),
+(1, 'Raccordement de fibre optique', '/images/Orange-schema-securisation.png', '2022-2023', 'Exemple de raccordement de fibre optique (FTTO) dans une entreprise', 'Relation client, autonomie', 'Planification, Gestions de projets, Bureautique, Étude d''une infrastructure réseau. Connaissance des réseaux FTTO', NULL),
+(1, 'Chat chiffré en java', '/images/SAE302.png', '2022-2023', 'Création d''un chat en java avec un serveur et des clients, permettant de communiquer entre eux sur différents salons', NULL, 'Langages: Java, SQL. Compréhension des sockets. Compréhension des threads. Travail en équipe', NULL),
+(1, 'Site Web des écoles de Blois', '/images/SAE23.png', '2021-2022', 'Site permettant aux utilisateurs de voir les différentes écoles de Blois et leurs formations, ceci avec des statistiques sur chaque école. Possibilité de créer un compte afin d''envoyer des tickets aux développeurs pour de possibles améliorations.', NULL, 'Langages: HTML, CSS(Bootstrap), PHP, SQL. Travail en équipe', NULL);
