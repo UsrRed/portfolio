@@ -44,5 +44,4 @@ networks:
 
 volumes:
   db_data:
-  traefik_certs:
   uploads:
