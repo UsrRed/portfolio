@@ -147,6 +147,10 @@ func main() {
 	}
 	defer db.Close()
 
+	if err = db.Ping(); err != nil {
+		log.Fatalf("Cannot connect to database: %v", err)
+	}
+
 	http.HandleFunc("/api/get-data", getDataHandler)
 
 	adminEnabled := os.Getenv("ENABLE_ADMIN") == "true"
@@ -869,14 +873,15 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer skillRows.Close()
 		for skillRows.Next() {
 			var s Skill
 			if err := skillRows.Scan(&s.ID, &s.DomainID, &s.Name, &s.ImageURL, &s.Details); err != nil {
+				skillRows.Close()
 				return nil, err
 			}
 			d.Skills = append(d.Skills, s)
 		}
+		skillRows.Close()
 		p.Domains = append(p.Domains, d)
 	}
 

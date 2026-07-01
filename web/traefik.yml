@@ -28,4 +28,5 @@ certificatesResolvers:
     acme:
       email: "yoh.denoyelle@gmail.com"
       storage: "/letsencrypt/acme.json"
-      tlsChallenge: {}
+      httpChallenge:
+        entryPoint: web
