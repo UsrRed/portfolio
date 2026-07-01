@@ -4,15 +4,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	_ "github.com/lib/pq"
 )
-
-// Structures matched to DB schema
 
 type Person struct {
 	ID            int    `json:"id"`
@@ -106,9 +109,33 @@ type PortfolioData struct {
 
 var db *sql.DB
 
+func setCORSHeaders(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+func handlePreflight(w http.ResponseWriter, r *http.Request) bool {
+	setCORSHeaders(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return true
+	}
+	return false
+}
+
+func extractIDFromPath(path, prefix string) (int, error) {
+	s := strings.TrimPrefix(path, prefix)
+	s = strings.Trim(s, "/")
+	if s == "" {
+		return 0, fmt.Errorf("no id in path")
+	}
+	return strconv.Atoi(s)
+}
+
 func main() {
 	var err error
-	// Construct connection string from env vars
 	userInfo := url.UserPassword(os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"))
 	connStr := fmt.Sprintf("postgres://%s@db:5432/%s?sslmode=disable",
 		userInfo.String(),
@@ -122,13 +149,46 @@ func main() {
 
 	http.HandleFunc("/api/get-data", getDataHandler)
 
+	adminEnabled := os.Getenv("ENABLE_ADMIN") == "true"
+
+	if os.Getenv("ENABLE_ADD_PROJECT") != "false" || adminEnabled {
+		http.HandleFunc("/api/projects", projectsHandler)
+		http.HandleFunc("/api/projects/", projectsHandler)
+		log.Println("Projects endpoint enabled")
+	}
+
+	if adminEnabled {
+		http.HandleFunc("/api/upload", uploadHandler)
+		http.HandleFunc("/api/person", personHandler)
+		http.HandleFunc("/api/domains", domainsHandler)
+		http.HandleFunc("/api/domains/", domainsHandler)
+		http.HandleFunc("/api/skills", skillsHandler)
+		http.HandleFunc("/api/skills/", skillsHandler)
+		http.HandleFunc("/api/languages", languagesHandler)
+		http.HandleFunc("/api/languages/", languagesHandler)
+		http.HandleFunc("/api/hobbies", hobbiesHandler)
+		http.HandleFunc("/api/hobbies/", hobbiesHandler)
+		http.HandleFunc("/api/soft-skills", softSkillsHandler)
+		http.HandleFunc("/api/soft-skills/", softSkillsHandler)
+		http.HandleFunc("/api/educations", educationsHandler)
+		http.HandleFunc("/api/educations/", educationsHandler)
+		http.HandleFunc("/api/experiences", experiencesHandler)
+		http.HandleFunc("/api/experiences/", experiencesHandler)
+		log.Println("Admin endpoints enabled")
+	}
+
 	log.Println("Server started on :3000")
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
+// ─── GET ALL DATA ────────────────────────────────────────────────────────────
+
 func getDataHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*") // CORS for development
+	setCORSHeaders(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
 	data, err := fetchPortfolioData()
 	if err != nil {
@@ -140,18 +200,660 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
+// ─── UPLOAD ──────────────────────────────────────────────────────────────────
+
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "File too large", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		http.Error(w, "No image provided", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+
+	if err := os.MkdirAll("/uploads", 0755); err != nil {
+		log.Printf("Error creating uploads dir: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	dst, err := os.Create(filepath.Join("/uploads", filename))
+	if err != nil {
+		log.Printf("Error creating file: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		log.Printf("Error writing file: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"url": "/user-uploads/" + filename})
+}
+
+// ─── PERSON ──────────────────────────────────────────────────────────────────
+
+func personHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var p Person
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	_, err := db.Exec(
+		`UPDATE person SET first_name=$1, last_name=$2, title=$3, description=$4, location=$5, driver_license=$6, linkedin_url=$7, image_url=$8 WHERE id=1`,
+		p.FirstName, p.LastName, p.Title, p.Description, p.Location, p.DriverLicense, p.LinkedinURL, p.ImageURL,
+	)
+	if err != nil {
+		log.Printf("Error updating person: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	p.ID = 1
+	json.NewEncoder(w).Encode(p)
+}
+
+// ─── DOMAINS ─────────────────────────────────────────────────────────────────
+
+func domainsHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/domains")
+	path = strings.Trim(path, "/")
+
+	if path == "" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var d Domain
+		if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		err := db.QueryRow("INSERT INTO domain (name) VALUES ($1) RETURNING id", d.Name).Scan(&d.ID)
+		if err != nil {
+			log.Printf("Error creating domain: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(d)
+		return
+	}
+
+	id, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var d Domain
+		if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if _, err := db.Exec("UPDATE domain SET name=$1 WHERE id=$2", d.Name, id); err != nil {
+			log.Printf("Error updating domain: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		d.ID = id
+		json.NewEncoder(w).Encode(d)
+
+	case http.MethodDelete:
+		if _, err := db.Exec("DELETE FROM domain WHERE id=$1", id); err != nil {
+			log.Printf("Error deleting domain: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ─── SKILLS ──────────────────────────────────────────────────────────────────
+
+func skillsHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/skills")
+	path = strings.Trim(path, "/")
+
+	if path == "" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var s Skill
+		if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		err := db.QueryRow(
+			"INSERT INTO skill (domain_id, name, image_url, details) VALUES ($1, $2, $3, $4) RETURNING id",
+			s.DomainID, s.Name, s.ImageURL, s.Details,
+		).Scan(&s.ID)
+		if err != nil {
+			log.Printf("Error creating skill: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(s)
+		return
+	}
+
+	id, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var s Skill
+		if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if _, err := db.Exec(
+			"UPDATE skill SET domain_id=$1, name=$2, image_url=$3, details=$4 WHERE id=$5",
+			s.DomainID, s.Name, s.ImageURL, s.Details, id,
+		); err != nil {
+			log.Printf("Error updating skill: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		s.ID = id
+		json.NewEncoder(w).Encode(s)
+
+	case http.MethodDelete:
+		if _, err := db.Exec("DELETE FROM skill WHERE id=$1", id); err != nil {
+			log.Printf("Error deleting skill: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ─── LANGUAGES ───────────────────────────────────────────────────────────────
+
+func languagesHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/languages")
+	path = strings.Trim(path, "/")
+
+	if path == "" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var l Language
+		if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		err := db.QueryRow(
+			"INSERT INTO language (person_id, name, level, image_url, certification_url) VALUES (1, $1, $2, $3, $4) RETURNING id",
+			l.Name, l.Level, l.ImageURL, l.CertificationURL,
+		).Scan(&l.ID)
+		if err != nil {
+			log.Printf("Error creating language: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(l)
+		return
+	}
+
+	id, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var l Language
+		if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if _, err := db.Exec(
+			"UPDATE language SET name=$1, level=$2, image_url=$3, certification_url=$4 WHERE id=$5",
+			l.Name, l.Level, l.ImageURL, l.CertificationURL, id,
+		); err != nil {
+			log.Printf("Error updating language: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		l.ID = id
+		json.NewEncoder(w).Encode(l)
+
+	case http.MethodDelete:
+		if _, err := db.Exec("DELETE FROM language WHERE id=$1", id); err != nil {
+			log.Printf("Error deleting language: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ─── HOBBIES ─────────────────────────────────────────────────────────────────
+
+func hobbiesHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/hobbies")
+	path = strings.Trim(path, "/")
+
+	if path == "" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var h Hobby
+		if err := json.NewDecoder(r.Body).Decode(&h); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		err := db.QueryRow(
+			"INSERT INTO hobby (person_id, name, image_url) VALUES (1, $1, $2) RETURNING id",
+			h.Name, h.ImageURL,
+		).Scan(&h.ID)
+		if err != nil {
+			log.Printf("Error creating hobby: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(h)
+		return
+	}
+
+	id, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var h Hobby
+		if err := json.NewDecoder(r.Body).Decode(&h); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if _, err := db.Exec("UPDATE hobby SET name=$1, image_url=$2 WHERE id=$3", h.Name, h.ImageURL, id); err != nil {
+			log.Printf("Error updating hobby: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		h.ID = id
+		json.NewEncoder(w).Encode(h)
+
+	case http.MethodDelete:
+		if _, err := db.Exec("DELETE FROM hobby WHERE id=$1", id); err != nil {
+			log.Printf("Error deleting hobby: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ─── SOFT SKILLS ─────────────────────────────────────────────────────────────
+
+func softSkillsHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/soft-skills")
+	path = strings.Trim(path, "/")
+
+	if path == "" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var s SoftSkill
+		if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		err := db.QueryRow(
+			"INSERT INTO soft_skill (person_id, name, image_url) VALUES (1, $1, $2) RETURNING id",
+			s.Name, s.ImageURL,
+		).Scan(&s.ID)
+		if err != nil {
+			log.Printf("Error creating soft skill: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(s)
+		return
+	}
+
+	id, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var s SoftSkill
+		if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if _, err := db.Exec("UPDATE soft_skill SET name=$1, image_url=$2 WHERE id=$3", s.Name, s.ImageURL, id); err != nil {
+			log.Printf("Error updating soft skill: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		s.ID = id
+		json.NewEncoder(w).Encode(s)
+
+	case http.MethodDelete:
+		if _, err := db.Exec("DELETE FROM soft_skill WHERE id=$1", id); err != nil {
+			log.Printf("Error deleting soft skill: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ─── EDUCATIONS ──────────────────────────────────────────────────────────────
+
+func educationsHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/educations")
+	path = strings.Trim(path, "/")
+
+	if path == "" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var e Education
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		err := db.QueryRow(
+			"INSERT INTO education (person_id, school, school_url, degree, details, start_date, status) VALUES (1, $1, $2, $3, $4, $5, $6) RETURNING id",
+			e.School, e.SchoolURL, e.Degree, e.Details, e.StartDate, e.Status,
+		).Scan(&e.ID)
+		if err != nil {
+			log.Printf("Error creating education: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(e)
+		return
+	}
+
+	id, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var e Education
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if _, err := db.Exec(
+			"UPDATE education SET school=$1, school_url=$2, degree=$3, details=$4, start_date=$5, status=$6 WHERE id=$7",
+			e.School, e.SchoolURL, e.Degree, e.Details, e.StartDate, e.Status, id,
+		); err != nil {
+			log.Printf("Error updating education: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		e.ID = id
+		json.NewEncoder(w).Encode(e)
+
+	case http.MethodDelete:
+		if _, err := db.Exec("DELETE FROM education WHERE id=$1", id); err != nil {
+			log.Printf("Error deleting education: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ─── EXPERIENCES ─────────────────────────────────────────────────────────────
+
+func experiencesHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/experiences")
+	path = strings.Trim(path, "/")
+
+	if path == "" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var e Experience
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		err := db.QueryRow(
+			"INSERT INTO experience (person_id, company, company_url, role, details, start_date, duration, status) VALUES (1, $1, $2, $3, $4, $5, $6, $7) RETURNING id",
+			e.Company, e.CompanyURL, e.Role, e.Details, e.StartDate, e.Duration, e.Status,
+		).Scan(&e.ID)
+		if err != nil {
+			log.Printf("Error creating experience: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(e)
+		return
+	}
+
+	id, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var e Experience
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if _, err := db.Exec(
+			"UPDATE experience SET company=$1, company_url=$2, role=$3, details=$4, start_date=$5, duration=$6, status=$7 WHERE id=$8",
+			e.Company, e.CompanyURL, e.Role, e.Details, e.StartDate, e.Duration, e.Status, id,
+		); err != nil {
+			log.Printf("Error updating experience: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		e.ID = id
+		json.NewEncoder(w).Encode(e)
+
+	case http.MethodDelete:
+		if _, err := db.Exec("DELETE FROM experience WHERE id=$1", id); err != nil {
+			log.Printf("Error deleting experience: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ─── PROJECTS ────────────────────────────────────────────────────────────────
+
+func projectsHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/projects")
+	path = strings.Trim(path, "/")
+
+	if path == "" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var p Project
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if p.Title == "" {
+			http.Error(w, "title is required", http.StatusBadRequest)
+			return
+		}
+		err := db.QueryRow(
+			`INSERT INTO project (person_id, title, image_url, period, description, skills_human, skills_tech, link_url)
+			 VALUES (1, $1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+			p.Title, p.ImageURL, p.Period, p.Description, p.SkillsHuman, p.SkillsTech, p.LinkURL,
+		).Scan(&p.ID)
+		if err != nil {
+			log.Printf("Error inserting project: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(p)
+		return
+	}
+
+	id, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var p Project
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if _, err := db.Exec(
+			"UPDATE project SET title=$1, image_url=$2, period=$3, description=$4, skills_human=$5, skills_tech=$6, link_url=$7 WHERE id=$8",
+			p.Title, p.ImageURL, p.Period, p.Description, p.SkillsHuman, p.SkillsTech, p.LinkURL, id,
+		); err != nil {
+			log.Printf("Error updating project: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		p.ID = id
+		json.NewEncoder(w).Encode(p)
+
+	case http.MethodDelete:
+		if _, err := db.Exec("DELETE FROM project WHERE id=$1", id); err != nil {
+			log.Printf("Error deleting project: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ─── FETCH ALL DATA ──────────────────────────────────────────────────────────
+
 func fetchPortfolioData() (*PortfolioData, error) {
 	var p PortfolioData
 
-	// 1. Fetch Person (assumes ID 1)
-	err := db.QueryRow("SELECT id, first_name, last_name, COALESCE(to_char(birth_date, 'YYYY-MM-DD'), ''), COALESCE(driver_license, ''), COALESCE(location, ''), COALESCE(title, ''), COALESCE(description, ''), COALESCE(linkedin_url, ''), COALESCE(image_url, '') FROM person WHERE id = 1").Scan(
+	err := db.QueryRow("SELECT id, first_name, last_name, COALESCE(to_char(birth_date, 'DD/MM/YYYY'), ''), COALESCE(driver_license, ''), COALESCE(location, ''), COALESCE(title, ''), COALESCE(description, ''), COALESCE(linkedin_url, ''), COALESCE(image_url, '') FROM person WHERE id = 1").Scan(
 		&p.Person.ID, &p.Person.FirstName, &p.Person.LastName, &p.Person.BirthDate, &p.Person.DriverLicense, &p.Person.Location, &p.Person.Title, &p.Person.Description, &p.Person.LinkedinURL, &p.Person.ImageURL,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching person: %v", err)
 	}
 
-	// 2. Fetch Domains and Skills
 	domainRows, err := db.Query("SELECT id, name FROM domain")
 	if err != nil {
 		return nil, fmt.Errorf("error fetching domains: %v", err)
@@ -163,14 +865,11 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		if err := domainRows.Scan(&d.ID, &d.Name); err != nil {
 			return nil, err
 		}
-
-		// Fetch Skills for this domain
 		skillRows, err := db.Query("SELECT id, domain_id, name, COALESCE(image_url, ''), COALESCE(details, '') FROM skill WHERE domain_id = $1", d.ID)
 		if err != nil {
 			return nil, err
 		}
 		defer skillRows.Close()
-
 		for skillRows.Next() {
 			var s Skill
 			if err := skillRows.Scan(&s.ID, &s.DomainID, &s.Name, &s.ImageURL, &s.Details); err != nil {
@@ -181,7 +880,6 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		p.Domains = append(p.Domains, d)
 	}
 
-	// 3. Fetch Languages
 	langRows, err := db.Query("SELECT id, name, COALESCE(level, ''), COALESCE(image_url, ''), COALESCE(certification_url, '') FROM language WHERE person_id = $1", p.Person.ID)
 	if err != nil {
 		return nil, err
@@ -195,7 +893,6 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		p.Languages = append(p.Languages, l)
 	}
 
-	// 4. Fetch Hobbies
 	hobbyRows, err := db.Query("SELECT id, name, COALESCE(image_url, '') FROM hobby WHERE person_id = $1", p.Person.ID)
 	if err != nil {
 		return nil, err
@@ -209,7 +906,6 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		p.Hobbies = append(p.Hobbies, h)
 	}
 
-	// 5. Fetch Soft Skills
 	softRows, err := db.Query("SELECT id, name, COALESCE(image_url, '') FROM soft_skill WHERE person_id = $1", p.Person.ID)
 	if err != nil {
 		return nil, err
@@ -223,7 +919,6 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		p.SoftSkills = append(p.SoftSkills, s)
 	}
 
-	// 6. Fetch Education
 	eduRows, err := db.Query("SELECT id, school, COALESCE(school_url, ''), degree, COALESCE(details, ''), COALESCE(start_date, ''), COALESCE(status, '') FROM education WHERE person_id = $1 ORDER BY id DESC", p.Person.ID)
 	if err != nil {
 		return nil, err
@@ -237,7 +932,6 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		p.Educations = append(p.Educations, e)
 	}
 
-	// 7. Fetch Experience
 	expRows, err := db.Query("SELECT id, company, COALESCE(company_url, ''), role, COALESCE(details, ''), COALESCE(start_date, ''), COALESCE(duration, ''), COALESCE(status, '') FROM experience WHERE person_id = $1 ORDER BY id DESC", p.Person.ID)
 	if err != nil {
 		return nil, err
@@ -251,8 +945,7 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		p.Experiences = append(p.Experiences, e)
 	}
 
-	// 8. Fetch Projects
-	projRows, err := db.Query("SELECT id, title, COALESCE(image_url, ''), COALESCE(period, ''), COALESCE(description, ''), COALESCE(skills_human, ''), COALESCE(skills_tech, ''), COALESCE(link_url, '') FROM project WHERE person_id = $1 ORDER BY id DESC", p.Person.ID)
+	projRows, err := db.Query("SELECT id, title, COALESCE(image_url, ''), COALESCE(period, ''), COALESCE(description, ''), COALESCE(skills_human, ''), COALESCE(skills_tech, ''), COALESCE(link_url, '') FROM project WHERE person_id = $1 ORDER BY id ASC", p.Person.ID)
 	if err != nil {
 		return nil, err
 	}
