@@ -11,7 +11,7 @@ services:
       - ./web/traefik.yml:/etc/traefik/traefik.yml:ro
       - traefik_certs:/letsencrypt
     networks:
-      - portfolio-network
+      - frontend
 
   frontend:
     restart: unless-stopped

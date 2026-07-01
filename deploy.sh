@@ -71,6 +71,30 @@ else
     echo -e "${BLUE}=== Démarrage du déploiement (Dev) ===${NC}\n"
 fi
 
+# Chargement du .env (génère depuis .env.model si absent)
+if [ ! -f .env ]; then
+    cp .env.model .env
+    echo -e "${BLUE}→ .env créé depuis .env.model${NC}"
+fi
+
+# En production, détecte et injecte SERVER_IP automatiquement
+if [ "$IS_PROD" = true ]; then
+    DETECTED_IP=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null \
+        || curl -s --max-time 5 https://ifconfig.me 2>/dev/null \
+        || hostname -I | awk '{print $1}')
+    if [ -z "$DETECTED_IP" ]; then
+        error_exit "Impossible de détecter l'IP publique du serveur (SERVER_IP)"
+    fi
+    export SERVER_IP="$DETECTED_IP"
+    # Met à jour .env pour conserver la valeur
+    if grep -q "^SERVER_IP=" .env; then
+        sed -i "s/^SERVER_IP=.*/SERVER_IP=${DETECTED_IP}/" .env
+    else
+        echo "SERVER_IP=${DETECTED_IP}" >> .env
+    fi
+    echo -e "${BLUE}→ SERVER_IP détecté : ${DETECTED_IP}${NC}"
+fi
+
 # 0. Vérification si Docker est installé
 echo -e "${GREEN}[0/5] Vérification de l'environnement...${NC}"
 if ! command -v docker &> /dev/null; then
