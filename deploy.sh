@@ -1,27 +1,23 @@
 #!/bin/bash
 
-# Configuration pour arrêter le script au premier échec
 set -e
 
-# Couleurs
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Fonction pour afficher les erreurs
 error_exit() {
     echo -e "\n${RED}✘ ERREUR à l'étape : $1${NC}"
     echo -e "${RED}Le déploiement a été stoppé.${NC}"
     exit 1
 }
 
-# Vérifie si un port est libre, propose de libérer sinon
 check_port() {
     local port=$1
     local label=$2
 
-    # ss -tlnp "sport = :PORT" filtre précisément sur le port en écoute
     if [ -z "$(ss -tlnp "sport = :${port}" 2>/dev/null | tail -n +2)" ]; then
         return 0
     fi
@@ -77,6 +73,9 @@ if [ ! -f .env ]; then
     echo -e "${BLUE}→ .env créé depuis .env.model${NC}"
 fi
 
+# Charge les variables .env dans le shell pour les utiliser dans ce script
+set -a; source .env; set +a
+
 # En production, détecte et injecte SERVER_IP automatiquement
 if [ "$IS_PROD" = true ]; then
     DETECTED_IP=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null \
@@ -86,7 +85,6 @@ if [ "$IS_PROD" = true ]; then
         error_exit "Impossible de détecter l'IP publique du serveur (SERVER_IP)"
     fi
     export SERVER_IP="$DETECTED_IP"
-    # Met à jour .env pour conserver la valeur
     if grep -q "^SERVER_IP=" .env; then
         sed -i "s/^SERVER_IP=.*/SERVER_IP=${DETECTED_IP}/" .env
     else
@@ -105,9 +103,17 @@ fi
 
 # 1. Nettoyage
 echo -e "${GREEN}[1/5] Nettoyage des anciens conteneurs...${NC}"
-docker compose $COMPOSE_FILES down --remove-orphans || error_exit "Nettoyage"
 
-# 1.5 Vérification des ports (détectés automatiquement depuis la config compose)
+EXTRA_DOWN_FLAGS="--remove-orphans"
+echo -ne "   ${YELLOW}Supprimer aussi les volumes Docker (DB réinitialisée depuis zéro) ?${NC} [y/N] " >&2; read -r rep </dev/tty
+if [[ "$rep" =~ ^[Yy]$ ]]; then
+    EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
+    echo -e "${GREEN}   → Volumes inclus dans le nettoyage.${NC}"
+fi
+
+docker compose $COMPOSE_FILES down $EXTRA_DOWN_FLAGS || error_exit "Nettoyage"
+
+# 1.5 Vérification des ports
 echo -e "${GREEN}[1.5/5] Vérification des ports...${NC}"
 while IFS=' ' read -r svc port; do
     check_port "$port" "$svc"
@@ -119,10 +125,65 @@ done < <(
     '
 )
 
-# 2. Build de la DB
+# 2. Build et lancement de la DB
 echo -e "${GREEN}[2/5] Préparation de la base de données...${NC}"
 docker compose $COMPOSE_FILES build db || error_exit "Build DB"
 docker compose $COMPOSE_FILES up -d db || error_exit "Lancement DB"
+
+# Attente que la DB soit prête
+echo -n "   Attente de la DB"
+until docker compose $COMPOSE_FILES exec -T db pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" &>/dev/null; do
+    echo -n "."
+    sleep 1
+done
+echo -e " ${GREEN}prête.${NC}"
+
+# En mode prod : proposition de restaurer un backup DB
+if [ "$IS_PROD" = true ]; then
+    BACKUP_DIR="./backups"
+    BACKUP_FILES=()
+
+    if [ -d "$BACKUP_DIR" ]; then
+        while IFS= read -r -d '' f; do
+            BACKUP_FILES+=("$f")
+        done < <(find "$BACKUP_DIR" -maxdepth 1 \( -name "*.sql" -o -name "*.dump" -o -name "*.pgdump" \) -print0 2>/dev/null | sort -z)
+    fi
+
+    if [ ${#BACKUP_FILES[@]} -gt 0 ]; then
+        echo -e "\n${YELLOW}→ Backups DB disponibles dans ${BACKUP_DIR}/ :${NC}"
+        for i in "${!BACKUP_FILES[@]}"; do
+            SIZE=$(du -sh "${BACKUP_FILES[$i]}" 2>/dev/null | cut -f1)
+            echo "   [$((i+1))] $(basename "${BACKUP_FILES[$i]}")  (${SIZE})"
+        done
+        echo -e "   [N] Ignorer — utiliser l'initialisation depuis init.sql"
+        echo -ne "\n   ${YELLOW}Restaurer un backup ?${NC} [1-${#BACKUP_FILES[@]}/N] " >&2; read -r rep </dev/tty
+
+        if [[ "$rep" =~ ^[0-9]+$ ]] && [ "$rep" -ge 1 ] && [ "$rep" -le "${#BACKUP_FILES[@]}" ]; then
+            SELECTED="${BACKUP_FILES[$((rep-1))]}"
+            echo -e "${BLUE}   → Restauration de $(basename "$SELECTED")...${NC}"
+
+            case "$SELECTED" in
+                *.sql)
+                    docker compose $COMPOSE_FILES exec -T db psql \
+                        -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
+                        < "$SELECTED" || error_exit "Restauration backup SQL"
+                    ;;
+                *.dump|*.pgdump)
+                    docker compose $COMPOSE_FILES exec -T db pg_restore \
+                        -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
+                        --clean --if-exists \
+                        < "$SELECTED" || error_exit "Restauration backup dump"
+                    ;;
+            esac
+
+            echo -e "${GREEN}   ✔ Backup restauré avec succès.${NC}"
+        else
+            echo -e "${BLUE}   → Initialisation depuis init.sql (par défaut).${NC}"
+        fi
+    else
+        echo -e "${BLUE}   → Aucun backup trouvé dans ${BACKUP_DIR}/ — initialisation depuis init.sql.${NC}"
+    fi
+fi
 
 # 3. Build Backend Go
 echo -e "${GREEN}[3/5] Construction de l'API Backend (Go)...${NC}"
@@ -140,7 +201,6 @@ if [ "$IS_PROD" = true ]; then
 fi
 
 # 5. État final
-echo -e "\n${BLUE}=== État des services ===${NC}"
 echo -e "\n${BLUE}=== État des services ===${NC}"
 docker compose $COMPOSE_FILES ps || error_exit "Affichage statut"
 
