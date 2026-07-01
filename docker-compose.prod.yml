@@ -1,8 +1,10 @@
 services:
   proxy:
-    image: traefik:v3.0
+    image: traefik:v3
     container_name: portfolio_proxy
     restart: unless-stopped
+    environment:
+      - DOCKER_API_VERSION=1.44
     ports:
       - "80:80"
       - "443:443"
