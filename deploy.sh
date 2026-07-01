@@ -76,6 +76,32 @@ fi
 # Charge les variables .env dans le shell pour les utiliser dans ce script
 set -a; source .env; set +a
 
+# En production, vérifie la synchronisation git
+if [ "$IS_PROD" = true ]; then
+    echo -e "${BLUE}→ Vérification de la synchronisation git...${NC}"
+    if ! git fetch --quiet 2>/dev/null; then
+        echo -e "${YELLOW}   ⚠ Impossible de contacter le remote git (réseau ?). On continue.${NC}"
+    else
+        LOCAL=$(git rev-parse HEAD)
+        REMOTE=$(git rev-parse '@{u}' 2>/dev/null || echo "")
+        if [ -z "$REMOTE" ]; then
+            echo -e "${YELLOW}   ⚠ Aucune branche upstream configurée — vérification ignorée.${NC}"
+        elif [ "$LOCAL" != "$REMOTE" ]; then
+            BEHIND=$(git rev-list --count HEAD..@{u})
+            echo -e "${YELLOW}   ⚠ La branche locale est en retard de ${BEHIND} commit(s) par rapport au remote.${NC}"
+            echo -ne "   ${YELLOW}Faire un git pull maintenant ?${NC} [y/N] " >&2; read -r rep </dev/tty
+            if [[ "$rep" =~ ^[Yy]$ ]]; then
+                git pull || error_exit "git pull"
+                echo -e "${GREEN}   ✔ Dépôt mis à jour.${NC}"
+            else
+                echo -e "${YELLOW}   → Déploiement avec le code local (non à jour).${NC}"
+            fi
+        else
+            echo -e "${GREEN}   ✔ Dépôt à jour.${NC}"
+        fi
+    fi
+fi
+
 # En production, détecte et injecte SERVER_IP automatiquement
 if [ "$IS_PROD" = true ]; then
     DETECTED_IP=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null \
