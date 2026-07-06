@@ -3,3 +3,5 @@ data_export_*.tar.gz
 frontend/tsconfig.app.tsbuildinfo
 CLAUDE.md
 web/dynamic.yml
+backups/
+.backup_tmp.*/

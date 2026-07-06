@@ -13,8 +13,9 @@ cd "$SCRIPT_DIR"
 [ -f .env ] && set -a && source .env && set +a
 
 usage() {
-    echo "Usage: $0 <archive.tar.gz> [--prod|--int]"
+    echo "Usage: $0 [archive.tar.gz] [--prod|--int]"
     echo "  archive  : fichier généré par export.sh"
+    echo "             (défaut : dernière archive du dossier backups/)"
     echo "  --prod   : cible l'environnement production"
     echo "  --int    : cible l'environnement intégration"
     exit 1
@@ -23,16 +24,27 @@ usage() {
 ARCHIVE=""
 COMPOSE_FILES=""
 ENV_LABEL="dev"
+BACKUP_DIR="backups"
 
 for arg in "$@"; do
     case "$arg" in
         --prod) COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"; ENV_LABEL="production" ;;
         --int)  COMPOSE_FILES="-f docker-compose.yml -f docker-compose.int.yml";  ENV_LABEL="intégration" ;;
+        -h|--help) usage ;;
         *.tar.gz) ARCHIVE="$arg" ;;
     esac
 done
 
-[ -z "$ARCHIVE" ] && usage
+# Sans archive explicite : prend la plus récente du dossier backups/
+if [ -z "$ARCHIVE" ]; then
+    ARCHIVE=$(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null | head -1 || true)
+    if [ -z "$ARCHIVE" ]; then
+        echo -e "${RED}✘ Aucune archive trouvée dans ${BACKUP_DIR}/${NC}"
+        usage
+    fi
+    echo -e "${BLUE}→ Archive la plus récente sélectionnée : ${ARCHIVE}${NC}"
+fi
+
 [ ! -f "$ARCHIVE" ] && echo -e "${RED}✘ Fichier introuvable : $ARCHIVE${NC}" && exit 1
 
 echo -e "${BLUE}=== Import des données (${ENV_LABEL}) ===${NC}"
@@ -40,7 +52,8 @@ echo -e "${YELLOW}⚠  Les données existantes seront écrasées.${NC}"
 echo -ne "   Continuer ? [y/N] "; read -r confirm </dev/tty
 [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Annulé."; exit 0; }
 
-TMP_DIR=$(mktemp -d)
+# Temp dir dans le projet : docker installé via snap ne peut pas monter /tmp
+TMP_DIR=$(mktemp -d "${SCRIPT_DIR}/.backup_tmp.XXXXXX")
 trap "rm -rf '$TMP_DIR'" EXIT
 
 # Extraction

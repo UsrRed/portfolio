@@ -9,6 +9,7 @@ import SoftSkillSection from '../components/SoftSkillSection.vue'
 import EducationSection from '../components/EducationSection.vue'
 import ExperienceSection from '../components/ExperienceSection.vue'
 import ProjectSection from '../components/ProjectSection.vue'
+import CvPrint from '../components/CvPrint.vue'
 
 const { data, error, loading } = useDataController()
 </script>
@@ -35,6 +36,10 @@ const { data, error, loading } = useDataController()
 
   <!-- Main content -->
   <div v-else-if="data">
+    <!-- CV imprimable : seul contenu rendu par Ctrl+P / window.print() -->
+    <CvPrint :data="data" />
+
+    <div class="site-screen">
     <NavBar :name="data.person.first_name + ' ' + data.person.last_name" />
 
     <main>
@@ -88,6 +93,7 @@ const { data, error, loading } = useDataController()
         </p>
       </div>
     </footer>
+    </div>
   </div>
 </template>
 
@@ -99,7 +105,7 @@ const { data, error, loading } = useDataController()
 }
 
 .footer {
-  background: var(--bg-2, #0d0d24);
+  background: var(--bg-2, #0b1120);
   border-top: 1px solid var(--border);
   padding: 3rem 0;
   text-align: center;

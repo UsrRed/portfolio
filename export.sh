@@ -22,9 +22,14 @@ else
     echo -e "${BLUE}=== Export (dev) ===${NC}"
 fi
 
+# Les backups vont dans backups/ (dossier ignoré par git)
+BACKUP_DIR="backups"
+mkdir -p "$BACKUP_DIR"
+
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-ARCHIVE="data_export_${TIMESTAMP}.tar.gz"
-TMP_DIR=$(mktemp -d)
+ARCHIVE="${BACKUP_DIR}/data_export_${TIMESTAMP}.tar.gz"
+# Temp dir dans le projet : docker installé via snap ne peut pas monter /tmp
+TMP_DIR=$(mktemp -d "${SCRIPT_DIR}/.backup_tmp.XXXXXX")
 trap "rm -rf '$TMP_DIR'" EXIT
 
 # 1. DB dump

@@ -12,6 +12,11 @@ function onScroll() {
   scrolled.value = window.scrollY > 40
 }
 
+function printCv() {
+  menuOpen.value = false
+  window.print()
+}
+
 onMounted(() => window.addEventListener('scroll', onScroll))
 onUnmounted(() => window.removeEventListener('scroll', onScroll))
 
@@ -28,8 +33,8 @@ const links = [
   <nav :class="['navbar', { 'navbar--scrolled': scrolled }]">
     <div class="navbar-inner container">
       <a class="navbar-brand" href="#presentation">
-        <span class="brand-dot"></span>
-        {{ name }}
+        <span class="brand-mark">{{ name.split(' ').map(w => w[0]).join('').slice(0, 2) }}</span>
+        <span class="brand-name">{{ name }}</span>
       </a>
 
       <button
@@ -46,6 +51,16 @@ const links = [
       <ul class="navbar-links" :class="{ open: menuOpen }">
         <li v-for="link in links" :key="link.href">
           <a :href="link.href" @click="menuOpen = false">{{ link.label }}</a>
+        </li>
+        <li>
+          <button class="cv-btn" @click="printCv" title="Enregistrer le CV en PDF (Ctrl+P)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            CV (PDF)
+          </button>
         </li>
         <li v-if="isAdminAvailable">
           <button
@@ -73,15 +88,15 @@ const links = [
   right: 0;
   z-index: 100;
   transition: all 0.3s ease;
-  padding: 1.25rem 0;
+  padding: 1.1rem 0;
 }
 
 .navbar--scrolled {
-  background: rgba(7, 7, 26, 0.85);
+  background: rgba(7, 11, 20, 0.88);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 0.75rem 0;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid var(--border);
+  padding: 0.7rem 0;
+  box-shadow: 0 4px 30px rgba(2, 6, 16, 0.45);
 }
 
 .navbar-inner {
@@ -93,20 +108,28 @@ const links = [
 .navbar-brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
+  font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: var(--text);
   text-decoration: none;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
-.brand-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: var(--grad);
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.35);
 }
 
 .navbar-links {
@@ -118,12 +141,12 @@ const links = [
 
 .navbar-links a {
   display: block;
-  padding: 0.5rem 0.875rem;
+  padding: 0.5rem 0.8rem;
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   transition: var(--transition);
 }
 
@@ -132,14 +155,38 @@ const links = [
   background: var(--surface);
 }
 
+.cv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.48rem 1.05rem;
+  margin-left: 0.5rem;
+  background: var(--primary-strong);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: 0.84rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.3);
+}
+
+.cv-btn:hover {
+  background: var(--primary);
+  transform: translateY(-1px);
+}
+
 .admin-toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.4rem 0.875rem;
+  padding: 0.45rem 0.875rem;
+  margin-left: 0.25rem;
   background: none;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  border-radius: var(--radius-full);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: 0.82rem;
   font-weight: 600;
@@ -148,15 +195,15 @@ const links = [
 }
 
 .admin-toggle:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-dim);
+  border-color: var(--warning);
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.08);
 }
 
 .admin-toggle.active {
-  background: var(--primary-dim);
-  border-color: var(--primary);
-  color: var(--primary);
+  background: rgba(251, 191, 36, 0.12);
+  border-color: var(--warning);
+  color: var(--warning);
 }
 
 .hamburger {
@@ -188,7 +235,17 @@ const links = [
   transform: translateY(-7px) rotate(-45deg);
 }
 
+@media (max-width: 900px) {
+  .brand-name {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
+  .brand-name {
+    display: inline;
+  }
+
   .hamburger {
     display: flex;
   }
@@ -201,7 +258,7 @@ const links = [
     right: 0;
     flex-direction: column;
     align-items: stretch;
-    background: rgba(13, 13, 36, 0.97);
+    background: rgba(11, 17, 32, 0.97);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     padding: 1rem 1.5rem;
@@ -215,6 +272,13 @@ const links = [
   .navbar-links a {
     padding: 0.75rem 1rem;
     font-size: 1rem;
+  }
+
+  .cv-btn,
+  .admin-toggle {
+    width: 100%;
+    justify-content: center;
+    margin: 0.25rem 0 0;
   }
 }
 </style>

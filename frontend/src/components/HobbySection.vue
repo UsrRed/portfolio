@@ -186,7 +186,7 @@ async function deleteItem() {
 
 .hobby-card:hover .hobby-img-wrap {
   transform: scale(1.08);
-  background: linear-gradient(135deg, var(--primary-dim), rgba(168,85,247,0.2));
+  background: linear-gradient(135deg, var(--primary-dim), rgba(56, 189, 248, 0.12));
   box-shadow: var(--glow);
 }
 

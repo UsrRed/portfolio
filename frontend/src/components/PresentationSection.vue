@@ -31,6 +31,10 @@ function openEdit() {
   showModal.value = true
 }
 
+function printCv() {
+  window.print()
+}
+
 async function save() {
   saving.value = true
   try {
@@ -47,26 +51,20 @@ async function save() {
 
 <template>
   <section class="hero" id="presentation">
-    <div class="hero-blobs">
-      <div class="blob blob-1"></div>
-      <div class="blob blob-2"></div>
-      <div class="blob blob-3"></div>
+    <div class="hero-bg">
+      <div class="hero-grid"></div>
+      <div class="hero-glow"></div>
     </div>
 
     <div class="hero-content container">
-      <div class="hero-avatar-wrap">
-        <div class="hero-avatar-ring"></div>
-        <img
-          :src="person.image_url"
-          :alt="person.first_name + ' ' + person.last_name"
-          class="hero-avatar"
-        />
-      </div>
-
       <div class="hero-text">
-        <p class="hero-greeting">Bonjour, je suis</p>
+        <p class="hero-eyebrow">
+          <span class="eyebrow-dot"></span>
+          Portfolio professionnel
+        </p>
+
         <h1 class="hero-name">
-          {{ person.first_name }}<br />
+          {{ person.first_name }}
           <span class="gradient-text">{{ person.last_name }}</span>
         </h1>
 
@@ -74,15 +72,15 @@ async function save() {
 
         <p class="hero-description">{{ person.description }}</p>
 
-        <div class="hero-tags">
-          <span v-if="person.location" class="tag">
+        <div class="hero-facts">
+          <span v-if="person.location" class="fact">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
               <circle cx="12" cy="10" r="3"/>
             </svg>
             {{ person.location }}
           </span>
-          <span v-if="person.driver_license" class="tag">
+          <span v-if="person.driver_license" class="fact">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="1" y="3" width="15" height="13" rx="2"/>
               <path d="m16 8 2 2 4-4M22 16l-1.5-6H1.5L0 16"/>
@@ -91,7 +89,7 @@ async function save() {
             </svg>
             {{ person.driver_license }}
           </span>
-          <span v-if="person.birth_date" class="tag">
+          <span v-if="person.birth_date" class="fact">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
               <line x1="16" y1="2" x2="16" y2="6"/>
@@ -108,9 +106,17 @@ async function save() {
               <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/>
               <circle cx="4" cy="4" r="2"/>
             </svg>
-            LinkedIn
+            Me contacter
           </a>
-          <a href="#competences" class="btn btn-outline">
+          <button class="btn btn-outline" @click="printCv" title="Enregistrer le CV en PDF (Ctrl+P)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Télécharger le CV
+          </button>
+          <a href="#competences" class="btn btn-ghost">
             Voir mes compétences
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -125,6 +131,17 @@ async function save() {
             Modifier la présentation
           </button>
         </div>
+      </div>
+
+      <div class="hero-portrait">
+        <div class="portrait-frame">
+          <img
+            :src="person.image_url"
+            :alt="person.first_name + ' ' + person.last_name"
+            class="portrait-img"
+          />
+        </div>
+        <div class="portrait-accent"></div>
       </div>
     </div>
 
@@ -183,137 +200,129 @@ async function save() {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
-  padding: 7rem 0 4rem;
+  padding: 8rem 0 5rem;
 }
 
-.hero-blobs {
+.hero-bg {
   position: absolute;
   inset: 0;
-  overflow: hidden;
   pointer-events: none;
 }
 
-.blob {
+.hero-grid {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.12;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 30%, transparent 75%);
 }
 
-.blob-1 {
-  width: 700px;
-  height: 700px;
-  background: radial-gradient(circle, #6366f1, #a855f7);
-  top: -200px;
-  right: -100px;
-  animation: blobFloat 12s ease-in-out infinite;
-}
-
-.blob-2 {
-  width: 500px;
+.hero-glow {
+  position: absolute;
+  width: 800px;
   height: 500px;
-  background: radial-gradient(circle, #22d3ee, #6366f1);
-  bottom: -100px;
-  left: -100px;
-  animation: blobFloat 10s ease-in-out infinite reverse;
-}
-
-.blob-3 {
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, #a855f7, #22d3ee);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: blobFloat 14s ease-in-out infinite 2s;
+  top: -180px;
+  right: -160px;
+  background: radial-gradient(ellipse, rgba(37, 99, 235, 0.16), transparent 65%);
+  filter: blur(20px);
 }
 
 .hero-content {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   align-items: center;
-  text-align: center;
-  gap: 2.5rem;
+  gap: 4rem;
   position: relative;
   z-index: 1;
 }
 
-.hero-avatar-wrap {
-  position: relative;
-  display: inline-block;
-}
-
-.hero-avatar-ring {
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: var(--grad);
-  animation: spin 6s linear infinite;
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px));
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.hero-avatar {
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
-  border: 4px solid var(--bg);
-  box-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
-}
-
-.hero-greeting {
-  font-size: 1rem;
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--text-muted);
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  margin-bottom: -1rem;
+  padding: 0.4rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  margin-bottom: 1.75rem;
+}
+
+.eyebrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.7);
+  animation: pulse 2.5s ease-in-out infinite;
 }
 
 .hero-name {
-  font-size: clamp(2.75rem, 8vw, 5.5rem);
-  font-weight: 900;
+  font-size: clamp(2.6rem, 6.5vw, 4.5rem);
+  font-weight: 800;
   line-height: 1.05;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
   color: var(--text);
 }
 
+.hero-name .gradient-text {
+  display: block;
+}
+
 .hero-title {
-  font-size: 1.1rem;
-  color: var(--accent);
+  font-size: 1.15rem;
+  color: var(--secondary);
   font-weight: 600;
-  margin-top: -0.5rem;
+  margin-top: 1rem;
 }
 
 .hero-description {
-  max-width: 620px;
+  max-width: 560px;
   color: var(--text-muted);
-  font-size: 1rem;
-  line-height: 1.7;
+  font-size: 1.02rem;
+  line-height: 1.75;
+  margin-top: 1.25rem;
 }
 
-.hero-tags {
+.hero-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
-  justify-content: center;
+  gap: 1.35rem;
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  max-width: 560px;
+}
+
+.fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.fact svg {
+  color: var(--primary);
+  flex-shrink: 0;
 }
 
 .hero-actions {
   display: flex;
-  gap: 1rem;
+  gap: 0.85rem;
   flex-wrap: wrap;
-  justify-content: center;
+  margin-top: 2.25rem;
 }
 
 .btn-admin {
@@ -323,7 +332,7 @@ async function save() {
   padding: 0.55rem 1.1rem;
   background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.3);
-  border-radius: var(--radius-full);
+  border-radius: 10px;
   color: #fbbf24;
   font-size: 0.85rem;
   font-weight: 600;
@@ -336,6 +345,38 @@ async function save() {
   border-color: rgba(251, 191, 36, 0.5);
 }
 
+.hero-portrait {
+  position: relative;
+  justify-self: center;
+}
+
+.portrait-frame {
+  position: relative;
+  width: min(320px, 70vw);
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  z-index: 1;
+}
+
+.portrait-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.portrait-accent {
+  position: absolute;
+  inset: 1.25rem -1.25rem -1.25rem 1.25rem;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: var(--radius-lg);
+  z-index: 0;
+}
+
 .hero-scroll {
   position: absolute;
   bottom: 2rem;
@@ -344,9 +385,9 @@ async function save() {
 }
 
 .scroll-indicator {
-  width: 24px;
-  height: 40px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  width: 22px;
+  height: 38px;
+  border: 2px solid var(--border);
   border-radius: 12px;
   position: relative;
 }
@@ -416,18 +457,41 @@ async function save() {
   min-height: 80px;
 }
 
-@keyframes blobFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
-}
-
-@media (max-width: 768px) {
-  .hero-avatar {
-    width: 120px;
-    height: 120px;
+@media (max-width: 900px) {
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    text-align: center;
   }
 
+  .hero-portrait {
+    order: -1;
+  }
+
+  .portrait-frame {
+    width: min(220px, 60vw);
+  }
+
+  .portrait-accent {
+    inset: 1rem -1rem -1rem 1rem;
+  }
+
+  .hero-description,
+  .hero-facts {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-facts {
+    justify-content: center;
+  }
+
+  .hero-actions {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
   .hero-actions {
     flex-direction: column;
     width: 100%;

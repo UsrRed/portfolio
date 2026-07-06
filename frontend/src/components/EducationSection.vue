@@ -232,15 +232,15 @@ async function deleteItem() {
   border-radius: 50%;
   background: var(--grad);
   border: 3px solid var(--bg);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
   z-index: 1;
 }
 
 .dot-active { animation: dotPulse 2s ease-in-out infinite; }
 
 @keyframes dotPulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(99, 102, 241, 0.5); }
-  50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.8), 0 0 0 6px rgba(99, 102, 241, 0.1); }
+  0%, 100% { box-shadow: 0 0 12px rgba(59, 130, 246, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 0 6px rgba(59, 130, 246, 0.1); }
 }
 
 .timeline-card { padding: 1.5rem; }

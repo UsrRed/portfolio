@@ -393,8 +393,8 @@ function deleteLabel(): string | undefined {
 
 .skill-back {
   transform: rotateY(180deg);
-  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(168,85,247,0.08));
-  border-color: rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(56, 189, 248, 0.06));
+  border-color: rgba(59, 130, 246, 0.3);
   padding: 1rem;
 }
 

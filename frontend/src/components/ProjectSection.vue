@@ -275,7 +275,7 @@ async function deleteItem() {
   position: relative;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: #0d0d24;
+  background: #0d1424;
 }
 
 .project-img {
@@ -356,7 +356,7 @@ async function deleteItem() {
 
 .project-skills-text.tech {
   background: var(--primary-dim);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(59, 130, 246, 0.25);
   color: #a5b4fc;
 }
 

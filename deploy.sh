@@ -138,10 +138,39 @@ fi
 echo -e "${GREEN}[1/5] Nettoyage des anciens conteneurs...${NC}"
 
 EXTRA_DOWN_FLAGS="--remove-orphans"
-echo -ne "   ${YELLOW}Supprimer aussi les volumes Docker (DB réinitialisée depuis zéro) ?${NC} [y/N] " >&2; read -r rep </dev/tty
-if [[ "$rep" =~ ^[Yy]$ ]]; then
-    EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
-    echo -e "${GREEN}   → Volumes inclus dans le nettoyage.${NC}"
+RESTORE_ARCHIVE=""
+BACKUP_DIR="./backups"
+
+if [ "$IS_PROD" = true ]; then
+    # En prod : proposition de supprimer complètement la BDD
+    # et de recharger la dernière backup du dossier backups/ (hors git).
+    LATEST_BACKUP=$(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null | head -1 || true)
+
+    if [ -n "$LATEST_BACKUP" ]; then
+        SIZE=$(du -sh "$LATEST_BACKUP" 2>/dev/null | cut -f1)
+        echo -e "   ${BLUE}Dernière backup disponible : $(basename "$LATEST_BACKUP") (${SIZE})${NC}"
+        echo -ne "   ${YELLOW}Supprimer complètement la BDD et recharger cette backup ?${NC} [y/N] " >&2; read -r rep </dev/tty
+        if [[ "$rep" =~ ^[Yy]$ ]]; then
+            EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
+            RESTORE_ARCHIVE="$LATEST_BACKUP"
+            echo -e "${GREEN}   → La BDD sera réinitialisée puis restaurée depuis la backup.${NC}"
+        else
+            echo -e "${BLUE}   → Données actuelles conservées.${NC}"
+        fi
+    else
+        echo -e "   ${BLUE}Aucune backup dans ${BACKUP_DIR}/ (générer avec ./export.sh --prod).${NC}"
+        echo -ne "   ${YELLOW}Supprimer quand même les volumes (BDD réinitialisée depuis init.sql) ?${NC} [y/N] " >&2; read -r rep </dev/tty
+        if [[ "$rep" =~ ^[Yy]$ ]]; then
+            EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
+            echo -e "${GREEN}   → Volumes inclus dans le nettoyage.${NC}"
+        fi
+    fi
+else
+    echo -ne "   ${YELLOW}Supprimer aussi les volumes Docker (DB réinitialisée depuis zéro) ?${NC} [y/N] " >&2; read -r rep </dev/tty
+    if [[ "$rep" =~ ^[Yy]$ ]]; then
+        EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
+        echo -e "${GREEN}   → Volumes inclus dans le nettoyage.${NC}"
+    fi
 fi
 
 docker compose $COMPOSE_FILES down $EXTRA_DOWN_FLAGS || error_exit "Nettoyage"
@@ -171,57 +200,51 @@ until docker compose $COMPOSE_FILES exec -T db pg_isready -U "${POSTGRES_USER}" 
 done
 echo -e " ${GREEN}prête.${NC}"
 
-# En mode prod : proposition de restaurer un backup DB
-if [ "$IS_PROD" = true ]; then
-    BACKUP_DIR="./backups"
-    BACKUP_FILES=()
+# Restauration de la BDD depuis la backup sélectionnée (archive export.sh)
+RESTORE_TMP=""
+if [ -n "$RESTORE_ARCHIVE" ]; then
+    echo -e "${BLUE}   → Restauration de la BDD depuis $(basename "$RESTORE_ARCHIVE")...${NC}"
+    # Temp dir dans le projet (chemin absolu requis pour le montage docker) :
+    # docker installé via snap ne peut pas monter /tmp
+    RESTORE_TMP=$(mktemp -d "$(pwd)/.backup_tmp.XXXXXX")
+    trap '[ -n "$RESTORE_TMP" ] && rm -rf "$RESTORE_TMP"' EXIT
 
-    if [ -d "$BACKUP_DIR" ]; then
-        while IFS= read -r -d '' f; do
-            BACKUP_FILES+=("$f")
-        done < <(find "$BACKUP_DIR" -maxdepth 1 \( -name "*.sql" -o -name "*.dump" -o -name "*.pgdump" \) -print0 2>/dev/null | sort -z)
-    fi
+    tar xzf "$RESTORE_ARCHIVE" -C "$RESTORE_TMP" || error_exit "Extraction de la backup"
+    [ -f "$RESTORE_TMP/db.sql" ] || error_exit "db.sql absent de la backup"
 
-    if [ ${#BACKUP_FILES[@]} -gt 0 ]; then
-        echo -e "\n${YELLOW}→ Backups DB disponibles dans ${BACKUP_DIR}/ :${NC}"
-        for i in "${!BACKUP_FILES[@]}"; do
-            SIZE=$(du -sh "${BACKUP_FILES[$i]}" 2>/dev/null | cut -f1)
-            echo "   [$((i+1))] $(basename "${BACKUP_FILES[$i]}")  (${SIZE})"
-        done
-        echo -e "   [N] Ignorer — utiliser l'initialisation depuis init.sql"
-        echo -ne "\n   ${YELLOW}Restaurer un backup ?${NC} [1-${#BACKUP_FILES[@]}/N] " >&2; read -r rep </dev/tty
-
-        if [[ "$rep" =~ ^[0-9]+$ ]] && [ "$rep" -ge 1 ] && [ "$rep" -le "${#BACKUP_FILES[@]}" ]; then
-            SELECTED="${BACKUP_FILES[$((rep-1))]}"
-            echo -e "${BLUE}   → Restauration de $(basename "$SELECTED")...${NC}"
-
-            case "$SELECTED" in
-                *.sql)
-                    docker compose $COMPOSE_FILES exec -T db psql \
-                        -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
-                        < "$SELECTED" || error_exit "Restauration backup SQL"
-                    ;;
-                *.dump|*.pgdump)
-                    docker compose $COMPOSE_FILES exec -T db pg_restore \
-                        -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
-                        --clean --if-exists \
-                        < "$SELECTED" || error_exit "Restauration backup dump"
-                    ;;
-            esac
-
-            echo -e "${GREEN}   ✔ Backup restauré avec succès.${NC}"
-        else
-            echo -e "${BLUE}   → Initialisation depuis init.sql (par défaut).${NC}"
-        fi
-    else
-        echo -e "${BLUE}   → Aucun backup trouvé dans ${BACKUP_DIR}/ — initialisation depuis init.sql.${NC}"
-    fi
+    docker compose $COMPOSE_FILES exec -T db psql \
+        -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
+        < "$RESTORE_TMP/db.sql" > /dev/null || error_exit "Restauration BDD"
+    echo -e "${GREEN}   ✔ Base de données restaurée.${NC}"
 fi
 
 # 3. Build Backend Go
 echo -e "${GREEN}[3/5] Construction de l'API Backend (Go)...${NC}"
 docker compose $COMPOSE_FILES build api || error_exit "Build API"
 docker compose $COMPOSE_FILES up -d api || error_exit "Lancement API"
+
+# Restauration des fichiers uploadés depuis la backup (le volume uploads
+# est disponible une fois le container api démarré)
+if [ -n "$RESTORE_ARCHIVE" ] && [ -f "$RESTORE_TMP/uploads.tar" ]; then
+    echo -e "${BLUE}   → Restauration des fichiers uploadés...${NC}"
+    API_CONTAINER=$(docker compose $COMPOSE_FILES ps -q api 2>/dev/null | head -1)
+    UPLOADS_VOLUME=""
+    if [ -n "$API_CONTAINER" ]; then
+        UPLOADS_VOLUME=$(docker inspect "$API_CONTAINER" \
+            --format '{{range .Mounts}}{{if eq .Destination "/uploads"}}{{.Name}}{{end}}{{end}}' 2>/dev/null || true)
+    fi
+
+    if [ -n "$UPLOADS_VOLUME" ]; then
+        docker run --rm \
+            -v "${UPLOADS_VOLUME}:/uploads" \
+            -v "${RESTORE_TMP}:/import:ro" \
+            alpine sh -c "rm -rf /uploads/* /uploads/.[!.]* 2>/dev/null; tar xf /import/uploads.tar -C /uploads" \
+            || error_exit "Restauration des uploads"
+        echo -e "${GREEN}   ✔ Fichiers uploadés restaurés.${NC}"
+    else
+        echo -e "${YELLOW}   ⚠ Volume uploads non trouvé — fichiers ignorés.${NC}"
+    fi
+fi
 
 # 4. Build Frontend Vue
 echo -e "${GREEN}[4/5] Construction du Frontend (Vue.js)...${NC}"
