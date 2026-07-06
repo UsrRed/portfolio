@@ -35,6 +35,7 @@ services:
         VITE_ENABLE_ADD_PROJECT: "false"
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=portfolio_frontend"
       # Challenge ACME — HTTP uniquement, sans redirection vers HTTPS
       - "traefik.http.routers.acme.rule=Host(`${DOMAIN}`) && PathPrefix(`/.well-known/acme-challenge/`)"
       - "traefik.http.routers.acme.entrypoints=web"
