@@ -6,12 +6,17 @@ providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
-  file:
-    filename: /etc/traefik/dynamic.yml
-    watch: true
 
 entryPoints:
   web:
     address: ":80"
   websecure:
     address: ":443"
+
+# Émission et renouvellement automatiques des certificats par Traefik (ACME)
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "yoh.denoyelle@gmail.com"
+      storage: "/letsencrypt/acme.json"
+      tlsChallenge: {}

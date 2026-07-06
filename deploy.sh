@@ -124,14 +124,6 @@ if [ "$IS_PROD" = true ]; then
         echo -e "${RED}Le domaine doit pointer vers l'IP ${DETECTED_IP} avant de déployer.${NC}"
         exit 1
     fi
-    if [ -z "${CERTBOT_EMAIL}" ]; then
-        echo -e "${RED}Erreur : CERTBOT_EMAIL doit être défini dans .env (ex: CERTBOT_EMAIL=contact@monportfolio.com)${NC}"
-        exit 1
-    fi
-
-    # Génère web/dynamic.yml (file provider Traefik) depuis le template
-    sed "s|\${DOMAIN}|${DOMAIN}|g" web/dynamic.yml.template > web/dynamic.yml
-    echo -e "${BLUE}→ Configuration TLS Traefik générée pour : ${DOMAIN}${NC}"
 fi
 
 # 0. Vérification si Docker est installé
@@ -239,30 +231,7 @@ docker compose $COMPOSE_FILES up -d frontend || error_exit "Lancement Frontend"
 if [ "$IS_PROD" = true ]; then
     echo -e "${GREEN}[+] Lancement du Proxy Traefik...${NC}"
     docker compose $COMPOSE_FILES up -d proxy || error_exit "Lancement Proxy"
-
-    echo -e "${GREEN}[+] Gestion du certificat SSL (Certbot / Let's Encrypt)...${NC}"
-    echo -n "   Attente que Traefik écoute sur le port 80"
-    until ss -tlnp "sport = :80" 2>/dev/null | grep -q LISTEN; do
-        echo -n "."
-        sleep 1
-    done
-    echo -e " ${GREEN}OK.${NC}"
-
-    echo -e "${BLUE}   → Obtention/renouvellement du certificat pour ${DOMAIN}...${NC}"
-    docker compose $COMPOSE_FILES run --rm certbot certonly \
-        --webroot -w /var/www/certbot \
-        --domain "$DOMAIN" \
-        --email "$CERTBOT_EMAIL" \
-        --agree-tos --no-eff-email \
-        --keep-until-expiring \
-        || error_exit "Obtention du certificat SSL (Certbot)"
-    echo -e "${GREEN}   ✔ Certificat SSL obtenu / à jour.${NC}"
-
-    echo -e "${BLUE}   → Rechargement Traefik avec le certificat...${NC}"
-    docker compose $COMPOSE_FILES restart proxy || error_exit "Rechargement Traefik"
-
-    echo -e "${GREEN}[+] Lancement du daemon Certbot (renouvellement automatique toutes les 12h)...${NC}"
-    docker compose $COMPOSE_FILES up -d certbot || error_exit "Lancement Certbot"
+    echo -e "${BLUE}   → Certificat SSL (Let's Encrypt) émis et renouvelé automatiquement par Traefik.${NC}"
 fi
 
 # 5. État final
