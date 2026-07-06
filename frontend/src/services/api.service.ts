@@ -8,6 +8,12 @@ export interface ProjectPayload {
   link_url: string
 }
 
+export interface ImageSearchResult {
+  image: string
+  thumbnail: string
+  title: string
+}
+
 export class ApiService {
   private static baseUrl = '/api'
 
@@ -23,6 +29,26 @@ export class ApiService {
     const form = new FormData()
     form.append('image', file)
     const response = await fetch(`${this.baseUrl}/upload`, { method: 'POST', body: form })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+    return data.url
+  }
+
+  // ── Image search ──────────────────────────────────────────────────────────
+
+  static async searchImages(query: string): Promise<ImageSearchResult[]> {
+    const response = await fetch(`${this.baseUrl}/image-search?q=${encodeURIComponent(query)}`)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+    return data.results ?? []
+  }
+
+  static async importImage(url: string): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/image-import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
     return data.url

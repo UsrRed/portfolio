@@ -6,19 +6,9 @@ defineProps<{ name: string }>()
 
 const menuOpen = ref(false)
 const scrolled = ref(false)
+const progress = ref(0)
+const activeSection = ref('#presentation')
 const { isAdminAvailable, adminMode, toggleAdminMode } = useAdmin()
-
-function onScroll() {
-  scrolled.value = window.scrollY > 40
-}
-
-function printCv() {
-  menuOpen.value = false
-  window.print()
-}
-
-onMounted(() => window.addEventListener('scroll', onScroll))
-onUnmounted(() => window.removeEventListener('scroll', onScroll))
 
 const links = [
   { href: '#presentation', label: 'Présentation' },
@@ -27,10 +17,39 @@ const links = [
   { href: '#experiences', label: 'Expériences' },
   { href: '#projets', label: 'Projets' },
 ]
+
+function onScroll() {
+  scrolled.value = window.scrollY > 40
+
+  const doc = document.documentElement
+  const max = doc.scrollHeight - window.innerHeight
+  progress.value = max > 0 ? Math.min(window.scrollY / max, 1) : 0
+
+  let current = links[0]!.href
+  for (const link of links) {
+    const el = document.querySelector<HTMLElement>(link.href)
+    if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.35) {
+      current = link.href
+    }
+  }
+  activeSection.value = current
+}
+
+function printCv() {
+  menuOpen.value = false
+  window.print()
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', onScroll, { passive: true })
+  onScroll()
+})
+onUnmounted(() => window.removeEventListener('scroll', onScroll))
 </script>
 
 <template>
   <nav :class="['navbar', { 'navbar--scrolled': scrolled }]">
+    <div class="scroll-progress" :style="{ transform: `scaleX(${progress})` }"></div>
     <div class="navbar-inner container">
       <a class="navbar-brand" href="#presentation">
         <span class="brand-mark">{{ name.split(' ').map(w => w[0]).join('').slice(0, 2) }}</span>
@@ -50,7 +69,11 @@ const links = [
 
       <ul class="navbar-links" :class="{ open: menuOpen }">
         <li v-for="link in links" :key="link.href">
-          <a :href="link.href" @click="menuOpen = false">{{ link.label }}</a>
+          <a
+            :href="link.href"
+            :class="{ active: activeSection === link.href }"
+            @click="menuOpen = false"
+          >{{ link.label }}</a>
         </li>
         <li>
           <button class="cv-btn" @click="printCv" title="Enregistrer le CV en PDF (Ctrl+P)">
@@ -99,6 +122,18 @@ const links = [
   box-shadow: 0 4px 30px rgba(2, 6, 16, 0.45);
 }
 
+.scroll-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--grad-accent);
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 0.1s linear;
+}
+
 .navbar-inner {
   display: flex;
   align-items: center;
@@ -141,6 +176,7 @@ const links = [
 
 .navbar-links a {
   display: block;
+  position: relative;
   padding: 0.5rem 0.8rem;
   color: var(--text-muted);
   text-decoration: none;
@@ -150,9 +186,31 @@ const links = [
   transition: var(--transition);
 }
 
+.navbar-links a::after {
+  content: '';
+  position: absolute;
+  left: 0.8rem;
+  bottom: 2px;
+  width: calc(100% - 1.6rem);
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .navbar-links a:hover {
   color: var(--text);
   background: var(--surface);
+}
+
+.navbar-links a.active {
+  color: var(--text);
+}
+
+.navbar-links a.active::after {
+  transform: scaleX(1);
 }
 
 .cv-btn {

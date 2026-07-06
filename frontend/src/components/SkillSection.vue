@@ -142,7 +142,7 @@ function deleteLabel(): string | undefined {
 </script>
 
 <template>
-  <section v-reveal class="section" id="competences">
+  <section v-reveal.stagger class="section" id="competences">
     <div class="container">
       <div class="section-header">
         <h2 class="section-title">Compétences</h2>
@@ -177,7 +177,7 @@ function deleteLabel(): string | undefined {
             <div
               v-for="skill in domain.skills"
               :key="skill.id"
-              class="skill-card"
+              class="skill-card stagger-item"
               :class="{ flipped: !adminMode && flipped === skill.id }"
               @click="toggle(skill.id)"
               :title="adminMode ? '' : (flipped === skill.id ? 'Cliquer pour fermer' : 'Cliquer pour voir les détails')"
@@ -243,7 +243,7 @@ function deleteLabel(): string | undefined {
           <label class="field-label">Détails</label>
           <textarea class="field-input field-textarea" v-model="form.details" rows="3" placeholder="Description de la compétence…"></textarea>
         </div>
-        <ImageUploadField v-model="form.image_url" label="Image" />
+        <ImageUploadField v-model="form.image_url" label="Image" :search-query="form.name" />
       </template>
     </div>
   </EditModal>

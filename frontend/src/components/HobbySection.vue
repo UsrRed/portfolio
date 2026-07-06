@@ -69,7 +69,7 @@ async function deleteItem() {
 </script>
 
 <template>
-  <section v-reveal class="section">
+  <section v-reveal.stagger class="section">
     <div class="container">
       <div class="section-header">
         <h2 class="section-title">Passions</h2>
@@ -83,7 +83,7 @@ async function deleteItem() {
       </div>
 
       <div class="hobbies-grid">
-        <div v-for="hobby in localItems" :key="hobby.id" class="hobby-card card">
+        <div v-for="hobby in localItems" :key="hobby.id" class="hobby-card card stagger-item">
           <div class="hobby-img-wrap">
             <img :src="hobby.image_url" :alt="hobby.name" class="hobby-img" />
           </div>

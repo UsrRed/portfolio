@@ -91,7 +91,7 @@ function getPercent(level: string): number {
 </script>
 
 <template>
-  <section v-reveal class="section">
+  <section v-reveal.stagger class="section">
     <div class="container">
       <div class="section-header">
         <h2 class="section-title">Langues</h2>
@@ -105,7 +105,7 @@ function getPercent(level: string): number {
       </div>
 
       <div class="langs-grid">
-        <div v-for="lang in localItems" :key="lang.id" class="lang-card card">
+        <div v-for="lang in localItems" :key="lang.id" class="lang-card card stagger-item">
           <div class="lang-header">
             <img v-if="lang.image_url" :src="lang.image_url" :alt="lang.name" class="lang-flag" />
             <h3 class="lang-name">{{ lang.name }}</h3>
@@ -263,7 +263,17 @@ function getPercent(level: string): number {
   height: 100%;
   background: var(--grad);
   border-radius: var(--radius-full);
-  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+  transform-origin: left;
+  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.5s;
+}
+
+/* La barre se remplit quand la carte est révélée */
+.lang-card.reveal .lang-bar-fill {
+  transform: scaleX(0);
+}
+
+.lang-card.reveal.visible .lang-bar-fill {
+  transform: scaleX(1);
 }
 
 .lang-cert {

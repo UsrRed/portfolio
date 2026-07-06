@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -163,6 +164,8 @@ func main() {
 
 	if adminEnabled {
 		http.HandleFunc("/api/upload", uploadHandler)
+		http.HandleFunc("/api/image-search", imageSearchHandler)
+		http.HandleFunc("/api/image-import", imageImportHandler)
 		http.HandleFunc("/api/person", personHandler)
 		http.HandleFunc("/api/domains", domainsHandler)
 		http.HandleFunc("/api/domains/", domainsHandler)
@@ -252,6 +255,194 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"url": "/user-uploads/" + filename})
+}
+
+// ─── IMAGE SEARCH ────────────────────────────────────────────────────────────
+
+type ImageResult struct {
+	Image     string `json:"image"`
+	Thumbnail string `json:"thumbnail"`
+	Title     string `json:"title"`
+}
+
+var ddgVqdRe = regexp.MustCompile(`vqd=['"]?([\d-]+)`)
+
+const searchUserAgent = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+
+func imageSearchHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		http.Error(w, "Missing query", http.StatusBadRequest)
+		return
+	}
+
+	results, err := searchDuckDuckGoImages(query)
+	if err != nil {
+		log.Printf("Error searching images: %v", err)
+		http.Error(w, "Image search failed", http.StatusBadGateway)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string][]ImageResult{"results": results})
+}
+
+func searchDuckDuckGoImages(query string) ([]ImageResult, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
+
+	// 1. Récupère le token vqd requis par l'API images de DuckDuckGo
+	tokenURL := "https://duckduckgo.com/?" + url.Values{"q": {query}, "iax": {"images"}, "ia": {"images"}}.Encode()
+	req, err := http.NewRequest(http.MethodGet, tokenURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", searchUserAgent)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+	if err != nil {
+		return nil, err
+	}
+	m := ddgVqdRe.FindSubmatch(body)
+	if m == nil {
+		return nil, fmt.Errorf("vqd token not found")
+	}
+
+	// 2. Recherche d'images (f=type:transparent favorise les PNG à fond transparent)
+	imgURL := "https://duckduckgo.com/i.js?" + url.Values{
+		"l":   {"fr-fr"},
+		"o":   {"json"},
+		"q":   {query},
+		"vqd": {string(m[1])},
+		"f":   {"type:transparent"},
+		"p":   {"1"},
+	}.Encode()
+	req, err = http.NewRequest(http.MethodGet, imgURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", searchUserAgent)
+	req.Header.Set("Referer", "https://duckduckgo.com/")
+	resp, err = client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("image API returned %d", resp.StatusCode)
+	}
+
+	var parsed struct {
+		Results []ImageResult `json:"results"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, err
+	}
+	if len(parsed.Results) > 24 {
+		parsed.Results = parsed.Results[:24]
+	}
+	return parsed.Results, nil
+}
+
+// ─── IMAGE IMPORT ────────────────────────────────────────────────────────────
+
+func imageImportHandler(w http.ResponseWriter, r *http.Request) {
+	if handlePreflight(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || payload.URL == "" {
+		http.Error(w, "Missing url", http.StatusBadRequest)
+		return
+	}
+	parsed, err := url.Parse(payload.URL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		http.Error(w, "Invalid url", http.StatusBadRequest)
+		return
+	}
+
+	client := &http.Client{Timeout: 20 * time.Second}
+	req, err := http.NewRequest(http.MethodGet, payload.URL, nil)
+	if err != nil {
+		http.Error(w, "Invalid url", http.StatusBadRequest)
+		return
+	}
+	req.Header.Set("User-Agent", searchUserAgent)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error downloading image: %v", err)
+		http.Error(w, "Download failed", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Download failed", http.StatusBadGateway)
+		return
+	}
+
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
+	if err != nil {
+		log.Printf("Error reading image: %v", err)
+		http.Error(w, "Download failed", http.StatusBadGateway)
+		return
+	}
+
+	ext := extensionForImage(data, parsed.Path)
+	if ext == "" {
+		http.Error(w, "Not an image", http.StatusBadRequest)
+		return
+	}
+
+	if err := os.MkdirAll("/uploads", 0755); err != nil {
+		log.Printf("Error creating uploads dir: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+	if err := os.WriteFile(filepath.Join("/uploads", filename), data, 0644); err != nil {
+		log.Printf("Error writing file: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"url": "/user-uploads/" + filename})
+}
+
+func extensionForImage(data []byte, urlPath string) string {
+	switch http.DetectContentType(data) {
+	case "image/png":
+		return ".png"
+	case "image/jpeg":
+		return ".jpg"
+	case "image/gif":
+		return ".gif"
+	case "image/webp":
+		return ".webp"
+	}
+	// DetectContentType ne reconnaît pas les SVG ; repli sur l'extension de l'URL
+	ext := strings.ToLower(filepath.Ext(urlPath))
+	if ext == ".svg" || ext == ".ico" {
+		return ext
+	}
+	return ""
 }
 
 // ─── PERSON ──────────────────────────────────────────────────────────────────

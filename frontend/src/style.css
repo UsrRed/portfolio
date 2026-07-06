@@ -65,6 +65,24 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Halos ambiants qui dérivent lentement derrière tout le contenu */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 42% 34% at 18% 22%, rgba(37, 99, 235, 0.09), transparent 70%),
+    radial-gradient(ellipse 38% 30% at 82% 68%, rgba(56, 189, 248, 0.06), transparent 70%);
+  animation: ambientDrift 26s ease-in-out infinite alternate;
+}
+
+@keyframes ambientDrift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to { transform: translate3d(2%, 2%, 0) scale(1.08); }
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
@@ -73,11 +91,13 @@ h1, h2, h3, h4 {
 /* ============================================
    SCROLL REVEAL
    ============================================ */
+/* !important : les éléments révélés (.card…) ont leur propre `transition: all`
+   qui écraserait celle du reveal. Le delay de stagger passe par --reveal-delay. */
 .reveal {
   opacity: 0;
   transform: translateY(28px);
-  transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1) var(--reveal-delay, 0s),
+              transform 0.7s cubic-bezier(0.4, 0, 0.2, 1) var(--reveal-delay, 0s) !important;
 }
 
 .reveal.visible {
@@ -89,6 +109,17 @@ h1, h2, h3, h4 {
 .reveal-delay-2 { transition-delay: 0.16s; }
 .reveal-delay-3 { transition-delay: 0.24s; }
 .reveal-delay-4 { transition-delay: 0.32s; }
+
+/* Le divider de section se dessine quand la section apparaît */
+.reveal .section-divider {
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1) 0.25s;
+}
+
+.reveal.visible .section-divider {
+  transform: scaleX(1);
+}
 
 /* ============================================
    LAYOUT
@@ -171,12 +202,35 @@ h1, h2, h3, h4 {
   background: var(--primary-strong);
   color: white;
   box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -80%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
 }
 
 .btn-primary:hover {
   background: var(--primary);
   transform: translateY(-1px);
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+}
+
+.btn-primary:hover::after {
+  animation: shine 0.8s ease;
+}
+
+@keyframes shine {
+  from { left: -80%; }
+  to { left: 130%; }
 }
 
 .btn-outline {
@@ -251,9 +305,16 @@ h1, h2, h3, h4 {
    ============================================ */
 .gradient-text {
   background: var(--grad-text);
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: gradientShift 6s ease-in-out infinite alternate;
+}
+
+@keyframes gradientShift {
+  from { background-position: 0% center; }
+  to { background-position: 100% center; }
 }
 
 /* ============================================
@@ -519,6 +580,21 @@ a:hover {
 }
 
 /* ============================================
+   REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ============================================
    RESPONSIVE UTILITIES
    ============================================ */
 @media (max-width: 768px) {
@@ -543,9 +619,12 @@ a:hover {
 }
 
 @media print {
+  /* Marges à 0 : le CV gère ses propres marges internes,
+     ce qui permet à la colonne latérale sombre d'occuper
+     toute la hauteur de la page. */
   @page {
     size: A4;
-    margin: 11mm 12mm;
+    margin: 0;
   }
 
   html {
@@ -559,11 +638,15 @@ a:hover {
     print-color-adjust: exact;
   }
 
+  body::before {
+    display: none;
+  }
+
   .site-screen {
     display: none !important;
   }
 
   .cv-print {
-    display: block !important;
+    display: grid !important;
   }
 }

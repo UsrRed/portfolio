@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useAdmin } from '../composables/useAdmin'
 import EditModal from './EditModal.vue'
 import ImageUploadField from './ImageUploadField.vue'
@@ -35,6 +35,48 @@ function printCv() {
   window.print()
 }
 
+// ── Effet machine à écrire sur le titre ──────────────────────────────────────
+
+const typedTitle = ref('')
+const typingDone = ref(false)
+let typingTimer: ReturnType<typeof setInterval> | undefined
+
+onMounted(() => {
+  const full = props.person.title ?? ''
+  if (!full || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    typedTitle.value = full
+    typingDone.value = true
+    return
+  }
+  let i = 0
+  typingTimer = setInterval(() => {
+    i++
+    typedTitle.value = full.slice(0, i)
+    if (i >= full.length) {
+      clearInterval(typingTimer)
+      typingDone.value = true
+    }
+  }, 45)
+})
+
+onUnmounted(() => clearInterval(typingTimer))
+
+// ── Tilt 3D du portrait au survol ────────────────────────────────────────────
+
+const tilt = reactive({ x: 0, y: 0 })
+
+function onPortraitMove(e: MouseEvent) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  tilt.x = ((e.clientY - rect.top) / rect.height - 0.5) * -8
+  tilt.y = ((e.clientX - rect.left) / rect.width - 0.5) * 8
+}
+
+function resetTilt() {
+  tilt.x = 0
+  tilt.y = 0
+}
+
 async function save() {
   saving.value = true
   try {
@@ -68,7 +110,9 @@ async function save() {
           <span class="gradient-text">{{ person.last_name }}</span>
         </h1>
 
-        <p v-if="person.title" class="hero-title">{{ person.title }}</p>
+        <p v-if="person.title" class="hero-title">
+          {{ typedTitle }}<span class="caret" :class="{ done: typingDone }"></span>
+        </p>
 
         <p class="hero-description">{{ person.description }}</p>
 
@@ -133,8 +177,11 @@ async function save() {
         </div>
       </div>
 
-      <div class="hero-portrait">
-        <div class="portrait-frame">
+      <div class="hero-portrait" @mousemove="onPortraitMove" @mouseleave="resetTilt">
+        <div
+          class="portrait-frame"
+          :style="{ transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }"
+        >
           <img
             :src="person.image_url"
             :alt="person.first_name + ' ' + person.last_name"
@@ -231,7 +278,34 @@ async function save() {
   right: -160px;
   background: radial-gradient(ellipse, rgba(37, 99, 235, 0.16), transparent 65%);
   filter: blur(20px);
+  animation: glowDrift 14s ease-in-out infinite alternate;
 }
+
+@keyframes glowDrift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-70px, 50px, 0) scale(1.12); }
+}
+
+/* Entrée en cascade des éléments du hero */
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-eyebrow { animation: heroIn 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.05s both; }
+.hero-name { animation: heroIn 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both; }
+.hero-title { animation: heroIn 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.28s both; }
+.hero-description { animation: heroIn 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both; }
+.hero-facts { animation: heroIn 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.52s both; }
+.hero-actions { animation: heroIn 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.64s both; }
+.hero-scroll { animation: heroIn 0.7s cubic-bezier(0.4, 0, 0.2, 1) 1s both; }
+
+@keyframes portraitIn {
+  from { opacity: 0; transform: scale(0.93) translateY(24px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.hero-portrait { animation: portraitIn 0.9s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both; }
 
 .hero-content {
   display: grid;
@@ -284,6 +358,28 @@ async function save() {
   color: var(--secondary);
   font-weight: 600;
   margin-top: 1rem;
+  min-height: 1.75em;
+}
+
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  margin-left: 3px;
+  background: var(--secondary);
+  vertical-align: text-bottom;
+  animation: caretBlink 0.9s step-end infinite;
+}
+
+.caret.done {
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.9s;
+}
+
+@keyframes caretBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .hero-description {
@@ -360,6 +456,8 @@ async function save() {
   background: var(--surface);
   box-shadow: var(--shadow-lg);
   z-index: 1;
+  transition: transform 0.25s ease-out;
+  will-change: transform;
 }
 
 .portrait-img {
@@ -375,6 +473,12 @@ async function save() {
   border: 1px solid rgba(59, 130, 246, 0.35);
   border-radius: var(--radius-lg);
   z-index: 0;
+  animation: accentFloat 6s ease-in-out infinite;
+}
+
+@keyframes accentFloat {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(6px, -8px); }
 }
 
 .hero-scroll {

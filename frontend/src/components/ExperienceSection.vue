@@ -73,7 +73,7 @@ async function deleteItem() {
 </script>
 
 <template>
-  <section v-reveal class="section" id="experiences">
+  <section v-reveal.stagger class="section" id="experiences">
     <div class="container">
       <div class="section-header">
         <h2 class="section-title">Expériences</h2>
@@ -87,7 +87,7 @@ async function deleteItem() {
       </div>
 
       <div class="timeline">
-        <div v-for="exp in localItems" :key="exp.id" class="timeline-item">
+        <div v-for="exp in localItems" :key="exp.id" class="timeline-item stagger-item">
           <div class="timeline-dot" :class="exp.status !== 'Terminé' ? 'dot-active' : ''"></div>
           <div class="timeline-card card">
             <div class="timeline-header">
@@ -219,6 +219,17 @@ async function deleteItem() {
   bottom: 10px;
   width: 2px;
   background: linear-gradient(to bottom, var(--secondary), var(--accent), transparent);
+  transform-origin: top;
+  transition: transform 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.2s;
+}
+
+/* La ligne se dessine quand la section est révélée */
+.section.reveal .timeline::before {
+  transform: scaleY(0);
+}
+
+.section.reveal.visible .timeline::before {
+  transform: scaleY(1);
 }
 
 .timeline-item {

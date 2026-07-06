@@ -86,7 +86,7 @@ async function deleteItem() {
 </script>
 
 <template>
-  <section v-reveal class="section" id="projets">
+  <section v-reveal.stagger class="section" id="projets">
     <div class="container">
       <div class="section-header">
         <h2 class="section-title">Projets</h2>
@@ -100,7 +100,7 @@ async function deleteItem() {
       </div>
 
       <div class="projects-grid">
-        <article v-for="project in localProjects" :key="project.id" class="project-card">
+        <article v-for="project in localProjects" :key="project.id" class="project-card stagger-item">
           <button v-if="adminMode" class="project-edit-btn" @click="openEdit(project)" title="Modifier">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
