@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useAdmin } from '../composables/useAdmin'
 import EditModal from './EditModal.vue'
 import ImageUploadField from './ImageUploadField.vue'
@@ -16,6 +16,7 @@ interface Project {
   skills_human?: string
   skills_tech?: string
   link_url: string
+  hidden?: boolean
 }
 
 const props = defineProps<{ projects: Project[] }>()
@@ -23,6 +24,12 @@ const props = defineProps<{ projects: Project[] }>()
 const { adminMode } = useAdmin()
 const saving = ref(false)
 const localProjects = ref<Project[]>([...props.projects])
+
+// En mode admin on voit tout (les masqués repérés par un badge) ;
+// sinon on filtre — en prod l'API ne les renvoie de toute façon pas.
+const visibleProjects = computed(() =>
+  adminMode.value ? localProjects.value : localProjects.value.filter(p => !p.hidden)
+)
 
 const toast = ref<{ msg: string; type: 'success' | 'error' } | null>(null)
 
@@ -36,7 +43,7 @@ const modal = ref<ModalMode>(null)
 const form = reactive<any>({})
 
 function openAdd() {
-  Object.assign(form, { title: '', image_url: '', period: '', description: '', skills_human: '', skills_tech: '', link_url: '' })
+  Object.assign(form, { title: '', image_url: '', period: '', description: '', skills_human: '', skills_tech: '', link_url: '', hidden: false })
   modal.value = { type: 'add' }
 }
 
@@ -100,7 +107,8 @@ async function deleteItem() {
       </div>
 
       <div class="projects-grid">
-        <article v-for="project in localProjects" :key="project.id" class="project-card stagger-item">
+        <article v-for="project in visibleProjects" :key="project.id" class="project-card stagger-item" :class="{ 'project-hidden': project.hidden }">
+          <span v-if="adminMode && project.hidden" class="project-hidden-badge">Masqué</span>
           <button v-if="adminMode" class="project-edit-btn" @click="openEdit(project)" title="Modifier">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -109,10 +117,10 @@ async function deleteItem() {
           </button>
 
           <div v-if="project.image_url" class="project-img-wrap">
-            <img :src="project.image_url" :alt="project.title" class="project-img" />
+            <img :src="project.image_url" :alt="'Aperçu du projet ' + project.title" class="project-img" width="640" height="360" loading="lazy" decoding="async" />
             <div class="project-overlay">
               <p v-if="project.description" class="project-desc">{{ project.description }}</p>
-              <a v-if="project.link_url" :href="project.link_url" class="btn btn-primary project-link" target="_blank">
+              <a v-if="project.link_url" :href="project.link_url" class="btn btn-primary project-link" target="_blank" rel="noopener noreferrer">
                 En savoir plus
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
@@ -175,6 +183,10 @@ async function deleteItem() {
           <input class="field-input" v-model="form.link_url" placeholder="https://…" />
         </div>
         <ImageUploadField v-model="form.image_url" label="Image du projet" />
+        <label class="field-checkbox">
+          <input type="checkbox" v-model="form.hidden" />
+          Masquer ce projet (il n'apparaîtra pas sur le site en production)
+        </label>
       </div>
     </EditModal>
 
@@ -275,7 +287,7 @@ async function deleteItem() {
   position: relative;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: #0d1424;
+  background: var(--bg-elevated);
 }
 
 .project-img {
@@ -292,7 +304,7 @@ async function deleteItem() {
 .project-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(7, 7, 26, 0.96) 0%, rgba(7, 7, 26, 0.7) 60%, transparent 100%);
+  background: linear-gradient(to top, rgba(4, 10, 7, 0.96) 0%, rgba(4, 10, 7, 0.7) 60%, transparent 100%);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -356,8 +368,8 @@ async function deleteItem() {
 
 .project-skills-text.tech {
   background: var(--primary-dim);
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  color: #a5b4fc;
+  border: 1px solid rgba(var(--primary-rgb), 0.25);
+  color: #6ee7b7;
 }
 
 .project-skills-text.human {
@@ -399,6 +411,33 @@ async function deleteItem() {
 
 .field-input:focus { outline: none; border-color: var(--primary); }
 .field-textarea { resize: vertical; min-height: 70px; }
+
+.field-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.project-hidden { opacity: 0.45; }
+
+.project-hidden-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  padding: 0.2rem 0.6rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--radius-sm);
+  color: #f87171;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 
 @media (max-width: 640px) {
   .projects-grid { grid-template-columns: 1fr; }

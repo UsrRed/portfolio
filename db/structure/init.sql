@@ -101,7 +101,8 @@ CREATE TABLE project (
     description TEXT,
     skills_human TEXT, -- "Autonomie, Savoir convaincre..."
     skills_tech TEXT, -- "Gestion de projet, Serveur..."
-    link_url VARCHAR(255)
+    link_url VARCHAR(255),
+    hidden BOOLEAN NOT NULL DEFAULT FALSE -- masqué : exclu du rendu public
 );
 
 
@@ -115,10 +116,9 @@ INSERT INTO person (first_name, last_name, birth_date, driver_license, location,
  'https://fr.linkedin.com/in/yohann-denoyelle', '/images/Yohann.jpeg');
 
 -- Domains
-INSERT INTO domain (name) VALUES 
+INSERT INTO domain (name) VALUES
 ('Compétences développement'),
 ('Compétences réseaux'),
-('Outils réseaux'),
 ('Marques utilisées');
 
 -- Skills: Développement
@@ -133,17 +133,17 @@ INSERT INTO skill (domain_id, name, image_url, details) VALUES
 ((SELECT id FROM domain WHERE name='Compétences développement'), 'Javascript', '/images/javascript.png', 'Création de graphiques de statistiques réalisé chez Senior Aerospace Ermeto et utilisé dans divers projets'),
 ((SELECT id FROM domain WHERE name='Compétences développement'), 'Docker', '/images/docker.png', 'Création d''un site web avec une supervision PLG et syslog-ng avec un réseau Docker');
 
--- Skills: Outils réseaux
-INSERT INTO skill (domain_id, name, image_url, details) VALUES 
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Microsoft Entra ID - Active Directory', '/images/active_directory.png', 'Administration d''utilisateurs sur des réseaux étudié et réalisé lors de travaux pratiques et lors de la mise en place des badges multifonctions'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Cisco Packet Tracer', '/images/Cisco-Packet-Tracer.webp', 'Réalisation de plusieurs projets de réseaux sécurisés'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Linux', '/images/linux.png', 'Bonnes bases de bash, distributions étudiées : Ubuntu, CentOS, Debian et Kali'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Windows', '/images/windows.png', 'Administration de serveurs sur Windows / configuration de clés de registre et de l''authentification durant la mise en place des badges'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Téléphonie', '/images/telephone.png', 'Configuration de téléphone analogique et VoIP'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Centreon', '/images/Centreon.png', 'Supervision de réseaux via Centreon et Nagios'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Wazuh', '/images/Wazuh.png', 'Étude du fonctionnement de Wazuh et mise en place sur différents équipements'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'Wireshark', '/images/Wireshark.png', 'Utilisation de Wireshark afin d''analyser des paquets réseaux'),
-((SELECT id FROM domain WHERE name='Outils réseaux'), 'VirtualBox', '/images/VirtualBox.png', 'Utilisation de VirtualBox pour la création de machines virtuelles, notamment pour des serveurs et expérimentation d''outils');
+-- Skills: Compétences réseaux
+INSERT INTO skill (domain_id, name, image_url, details) VALUES
+((SELECT id FROM domain WHERE name='Compétences réseaux'), 'Gestion des identités et des accès', '/images/active_directory.png', 'Administration d''utilisateurs avec Microsoft Entra ID et Active Directory, réalisée lors de travaux pratiques et de la mise en place des badges multifonctions'),
+((SELECT id FROM domain WHERE name='Compétences réseaux'), 'Conception de réseaux sécurisés', '/images/Cisco-Packet-Tracer.webp', 'Réalisation de plusieurs projets de réseaux sécurisés avec Cisco Packet Tracer'),
+((SELECT id FROM domain WHERE name='Compétences réseaux'), 'Administration Linux', '/images/linux.png', 'Bonnes bases de bash, distributions étudiées : Ubuntu, CentOS, Debian et Kali'),
+((SELECT id FROM domain WHERE name='Compétences réseaux'), 'Administration Windows', '/images/windows.png', 'Administration de serveurs sur Windows / configuration de clés de registre et de l''authentification durant la mise en place des badges'),
+((SELECT id FROM domain WHERE name='Compétences réseaux'), 'Configuration de téléphonie', '/images/telephone.png', 'Configuration de téléphone analogique et VoIP'),
+((SELECT id FROM domain WHERE name='Compétences réseaux'), 'Supervision de réseaux', '/images/Centreon.png', 'Supervision de réseaux via Centreon et Nagios'),
+((SELECT id FROM domain WHERE name='Compétences réseaux'), 'Configuration d''un EDR', '/images/Wazuh.png', 'Étude du fonctionnement de Wazuh et mise en place sur différents équipements'),
+((SELECT id FROM domain WHERE name='Compétences réseaux'), 'Analyse de trames réseaux', '/images/Wireshark.png', 'Utilisation de Wireshark afin d''analyser des paquets réseaux'),
+((SELECT id FROM domain WHERE name='Compétences réseaux'), 'Virtualisation', '/images/VirtualBox.png', 'Utilisation de VirtualBox pour la création de machines virtuelles, notamment pour des serveurs et expérimentation d''outils');
 
 -- Skills: Marques utilisées
 INSERT INTO skill (domain_id, name, image_url, details) VALUES 

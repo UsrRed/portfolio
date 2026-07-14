@@ -107,7 +107,7 @@ function getPercent(level: string): number {
       <div class="langs-grid">
         <div v-for="lang in localItems" :key="lang.id" class="lang-card card stagger-item">
           <div class="lang-header">
-            <img v-if="lang.image_url" :src="lang.image_url" :alt="lang.name" class="lang-flag" />
+            <img v-if="lang.image_url" :src="lang.image_url" :alt="'Drapeau ' + lang.name" class="lang-flag" width="44" height="32" loading="lazy" decoding="async" />
             <h3 class="lang-name">{{ lang.name }}</h3>
             <button v-if="adminMode" class="item-edit-btn" @click="openEdit(lang)" title="Modifier">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -120,7 +120,7 @@ function getPercent(level: string): number {
           <div class="lang-bar-track">
             <div class="lang-bar-fill" :style="{ width: getPercent(lang.level) + '%' }"></div>
           </div>
-          <a v-if="lang.certification_url" :href="lang.certification_url" class="lang-cert" target="_blank">
+          <a v-if="lang.certification_url" :href="lang.certification_url" class="lang-cert" target="_blank" rel="noopener noreferrer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>

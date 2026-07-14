@@ -1,49 +1,56 @@
 /* ============================================
-   DESIGN SYSTEM — Enterprise Portfolio
-   Sobre, précis, premium. Une seule couleur
-   d'accent, des surfaces nettes, une typo forte.
+   DESIGN SYSTEM — "Network Ops"
+   Identité terminal / ingénieur réseau :
+   fond vert-noir, accent émeraude→teal,
+   touches monospace, sections numérotées.
    ============================================ */
 
 :root {
-  --bg: #070b14;
-  --bg-2: #0b1120;
-  --surface: rgba(148, 163, 184, 0.05);
-  --surface-hover: rgba(148, 163, 184, 0.09);
-  --border: rgba(148, 163, 184, 0.14);
-  --border-glow: rgba(59, 130, 246, 0.45);
+  --bg: #060a08;
+  --bg-2: #0a110d;
+  --bg-elevated: #0d1511;
+  --surface: rgba(148, 184, 163, 0.05);
+  --surface-hover: rgba(148, 184, 163, 0.09);
+  --border: rgba(148, 184, 163, 0.14);
+  --border-glow: rgba(16, 185, 129, 0.45);
 
-  --primary: #3b82f6;
-  --primary-strong: #2563eb;
-  --primary-dim: rgba(59, 130, 246, 0.14);
-  --secondary: #60a5fa;
-  --accent: #7dd3fc;
+  /* Canaux RGB pour composer des rgba() cohérents partout */
+  --primary-rgb: 16, 185, 129;
+  --accent-rgb: 45, 212, 191;
+
+  --primary: #10b981;
+  --primary-strong: #059669;
+  --primary-dim: rgba(16, 185, 129, 0.12);
+  --secondary: #2dd4bf;
+  --accent: #5eead4;
   --success: #34d399;
   --warning: #fbbf24;
   --danger: #f87171;
 
-  --text: #e8eef7;
-  --text-muted: #94a5bd;
-  --text-dim: #566379;
+  --text: #e4efe8;
+  --text-muted: #93aa9c;
+  --text-dim: #566a5e;
 
-  --grad: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  --grad-accent: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
-  --grad-text: linear-gradient(110deg, #bfdbfe 0%, #60a5fa 55%, #3b82f6 100%);
+  --grad: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  --grad-accent: linear-gradient(135deg, #2dd4bf 0%, #059669 100%);
+  --grad-text: linear-gradient(110deg, #a7f3d0 0%, #34d399 55%, #2dd4bf 100%);
 
-  --font-display: 'Manrope', 'Inter', -apple-system, sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
   --font-body: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 18px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
   --radius-full: 9999px;
 
   --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
-  --shadow: 0 2px 16px rgba(2, 6, 16, 0.5);
-  --shadow-lg: 0 24px 64px rgba(2, 6, 16, 0.65);
-  --glow: 0 8px 32px rgba(37, 99, 235, 0.18);
-  --glow-accent: 0 8px 32px rgba(56, 189, 248, 0.14);
+  --shadow: 0 2px 16px rgba(3, 8, 5, 0.5);
+  --shadow-lg: 0 24px 64px rgba(3, 8, 5, 0.65);
+  --glow: 0 8px 32px rgba(16, 185, 129, 0.16);
+  --glow-accent: 0 8px 32px rgba(45, 212, 191, 0.14);
 }
 
 *, *::before, *::after {
@@ -73,8 +80,8 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 42% 34% at 18% 22%, rgba(37, 99, 235, 0.09), transparent 70%),
-    radial-gradient(ellipse 38% 30% at 82% 68%, rgba(56, 189, 248, 0.06), transparent 70%);
+    radial-gradient(ellipse 42% 34% at 18% 22%, rgba(5, 150, 105, 0.10), transparent 70%),
+    radial-gradient(ellipse 38% 30% at 82% 68%, rgba(45, 212, 191, 0.05), transparent 70%);
   animation: ambientDrift 26s ease-in-out infinite alternate;
 }
 
@@ -86,6 +93,18 @@ body::before {
 h1, h2, h3, h4 {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
+}
+
+/* Ancres : les sections ne passent pas sous la navbar fixe */
+[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* Accessibilité clavier */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 /* ============================================
@@ -139,17 +158,29 @@ h1, h2, h3, h4 {
    SECTION HEADER
    ============================================ */
 .section-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: 4rem;
 }
 
 .section-title {
   font-family: var(--font-display);
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--text);
-  display: inline-block;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+/* Préfixe façon commentaire de code */
+.section .section-title::before {
+  content: "//";
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary);
+  letter-spacing: 0.04em;
 }
 
 .section-divider {
@@ -186,7 +217,7 @@ h1, h2, h3, h4 {
   align-items: center;
   gap: 0.5rem;
   padding: 0.7rem 1.5rem;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.92rem;
   cursor: pointer;
@@ -199,9 +230,9 @@ h1, h2, h3, h4 {
 }
 
 .btn-primary {
-  background: var(--primary-strong);
-  color: white;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+  background: var(--primary);
+  color: #04140d;
+  box-shadow: 0 4px 16px rgba(var(--primary-rgb), 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -213,15 +244,15 @@ h1, h2, h3, h4 {
   left: -80%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
   transform: skewX(-20deg);
   pointer-events: none;
 }
 
 .btn-primary:hover {
-  background: var(--primary);
+  background: var(--secondary);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 8px 24px rgba(var(--primary-rgb), 0.4);
 }
 
 .btn-primary:hover::after {
@@ -267,16 +298,18 @@ h1, h2, h3, h4 {
 }
 
 /* ============================================
-   TAGS / BADGES
+   TAGS / BADGES — étiquettes façon console
    ============================================ */
 .tag {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.32rem 0.8rem;
-  border-radius: var(--radius-full);
-  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
   font-weight: 500;
+  letter-spacing: 0.01em;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -284,8 +317,8 @@ h1, h2, h3, h4 {
 
 .tag-primary {
   background: var(--primary-dim);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: #93c5fd;
+  border-color: rgba(var(--primary-rgb), 0.3);
+  color: #6ee7b7;
 }
 
 .tag-success {
@@ -368,7 +401,7 @@ h1, h2, h3, h4 {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 16, 0.8);
+  background: rgba(3, 8, 5, 0.8);
   backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
@@ -379,7 +412,7 @@ h1, h2, h3, h4 {
 }
 
 .modal {
-  background: #0d1424;
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 2rem;
@@ -455,7 +488,7 @@ h1, h2, h3, h4 {
 .form-input,
 .form-textarea {
   width: 100%;
-  background: rgba(148, 163, 184, 0.05);
+  background: rgba(148, 184, 163, 0.05);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.75rem 1rem;
@@ -469,8 +502,8 @@ h1, h2, h3, h4 {
 .form-input:focus,
 .form-textarea:focus {
   border-color: var(--primary);
-  background: rgba(59, 130, 246, 0.05);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  background: rgba(var(--primary-rgb), 0.05);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.12);
 }
 
 .form-input::placeholder,
@@ -562,7 +595,7 @@ h1, h2, h3, h4 {
    SELECTION
    ============================================ */
 ::selection {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(var(--primary-rgb), 0.3);
   color: var(--text);
 }
 

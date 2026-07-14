@@ -55,7 +55,7 @@ const emit = defineEmits<{
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(7, 7, 26, 0.8);
+  background: rgba(3, 8, 5, 0.8);
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;

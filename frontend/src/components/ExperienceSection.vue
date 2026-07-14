@@ -92,7 +92,8 @@ async function deleteItem() {
           <div class="timeline-card card">
             <div class="timeline-header">
               <div>
-                <a :href="exp.company_url || '#'" class="company-name" :target="exp.company_url ? '_blank' : undefined">{{ exp.company }}</a>
+                <a v-if="exp.company_url" :href="exp.company_url" class="company-name" target="_blank" rel="noopener noreferrer">{{ exp.company }}</a>
+                <span v-else class="company-name">{{ exp.company }}</span>
                 <p class="role">{{ exp.role }}</p>
               </div>
               <div class="status-block">
@@ -249,15 +250,15 @@ async function deleteItem() {
   border-radius: 50%;
   background: var(--grad-accent);
   border: 3px solid var(--bg);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5);
   z-index: 1;
 }
 
 .dot-active { animation: dotPulse 2s ease-in-out infinite; }
 
 @keyframes dotPulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(59, 130, 246, 0.5); }
-  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.9), 0 0 0 6px rgba(59, 130, 246, 0.1); }
+  0%, 100% { box-shadow: 0 0 12px rgba(45, 212, 191, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(45, 212, 191, 0.9), 0 0 0 6px rgba(45, 212, 191, 0.1); }
 }
 
 .timeline-card { padding: 1.5rem; }

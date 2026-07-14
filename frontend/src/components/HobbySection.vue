@@ -85,7 +85,7 @@ async function deleteItem() {
       <div class="hobbies-grid">
         <div v-for="hobby in localItems" :key="hobby.id" class="hobby-card card stagger-item">
           <div class="hobby-img-wrap">
-            <img :src="hobby.image_url" :alt="hobby.name" class="hobby-img" />
+            <img :src="hobby.image_url" :alt="hobby.name" class="hobby-img" width="80" height="80" loading="lazy" decoding="async" />
           </div>
           <p class="hobby-name">{{ hobby.name }}</p>
           <button v-if="adminMode" class="item-edit-btn" @click="openEdit(hobby)" title="Modifier">
@@ -186,7 +186,7 @@ async function deleteItem() {
 
 .hobby-card:hover .hobby-img-wrap {
   transform: scale(1.08);
-  background: linear-gradient(135deg, var(--primary-dim), rgba(56, 189, 248, 0.12));
+  background: linear-gradient(135deg, var(--primary-dim), rgba(var(--accent-rgb), 0.12));
   box-shadow: var(--glow);
 }
 

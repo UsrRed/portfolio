@@ -13,6 +13,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Sécurité : mutations désactivées par défaut (activées uniquement en dev via override)
+      ENABLE_ADMIN: "false"
+      ENABLE_ADD_PROJECT: "false"
     networks:
       - backend
     depends_on:

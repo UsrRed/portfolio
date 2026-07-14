@@ -80,15 +80,16 @@ const { data, error, loading } = useDataController()
     <!-- Footer -->
     <footer class="footer">
       <div class="container footer-inner">
-        <a v-if="data.person.linkedin_url" :href="data.person.linkedin_url" class="footer-linkedin" target="_blank">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <a v-if="data.person.linkedin_url" :href="data.person.linkedin_url" class="footer-linkedin" target="_blank" rel="noopener noreferrer" aria-label="Profil LinkedIn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/>
             <circle cx="4" cy="4" r="2"/>
           </svg>
           Me contacter sur LinkedIn
         </a>
         <p class="footer-copy">
-          Site créé par <span class="gradient-text">{{ data.person.first_name }} {{ data.person.last_name }}</span>
+          <span class="footer-prompt">~$</span> Site conçu et développé par
+          <span class="gradient-text">{{ data.person.first_name }} {{ data.person.last_name }}</span>
           &mdash; &copy; {{ new Date().getFullYear() }}
         </p>
       </div>
@@ -139,7 +140,13 @@ const { data, error, loading } = useDataController()
 }
 
 .footer-copy {
-  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
   color: var(--text-dim);
+}
+
+.footer-prompt {
+  color: var(--primary);
+  font-weight: 600;
 }
 </style>

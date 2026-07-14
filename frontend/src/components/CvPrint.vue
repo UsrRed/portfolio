@@ -1,9 +1,29 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 
 // CV imprimable : rendu uniquement via Ctrl+P / window.print()
 // (masqué à l'écran par la règle globale @media screen de style.css).
 const props = defineProps<{ data: any }>()
+
+// Le nom du PDF proposé par le navigateur reprend document.title :
+// on le remplace pendant l'impression puis on restaure le titre du site.
+const PDF_TITLE = 'Yohann Denoyelle CV'
+let siteTitle = ''
+const onBeforePrint = () => {
+  siteTitle = document.title
+  document.title = PDF_TITLE
+}
+const onAfterPrint = () => {
+  document.title = siteTitle
+}
+onMounted(() => {
+  window.addEventListener('beforeprint', onBeforePrint)
+  window.addEventListener('afterprint', onAfterPrint)
+})
+onUnmounted(() => {
+  window.removeEventListener('beforeprint', onBeforePrint)
+  window.removeEventListener('afterprint', onAfterPrint)
+})
 
 // Plafonds par section pour garantir un CV sur une seule page A4.
 const MAX_EXPERIENCES = 4
@@ -26,11 +46,10 @@ function sortRecent(items: any[] | undefined, key: (i: any) => [string?, string?
 
 const experiences = computed(() => sortRecent(props.data.experiences, (e) => [e.start_date, e.status], MAX_EXPERIENCES))
 const educations = computed(() => sortRecent(props.data.educations, (e) => [e.start_date, e.status], MAX_EDUCATIONS))
-const projects = computed(() => sortRecent(props.data.projects, (p) => [p.period], MAX_PROJECTS))
-
-const linkedinDisplay = computed(() =>
-  props.data.person.linkedin_url?.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+const projects = computed(() =>
+  sortRecent(props.data.projects?.filter((p: any) => !p.hidden), (p) => [p.period], MAX_PROJECTS)
 )
+
 </script>
 
 <template>
@@ -42,10 +61,22 @@ const linkedinDisplay = computed(() =>
       <section class="cv-side-section">
         <h2 class="cv-side-title">Contact</h2>
         <ul class="cv-contact">
-          <li v-if="data.person.location">{{ data.person.location }}</li>
-          <li v-if="linkedinDisplay">{{ linkedinDisplay }}</li>
-          <li v-if="data.person.driver_license">{{ data.person.driver_license }}</li>
-          <li v-if="data.person.birth_date">Né le {{ data.person.birth_date }}</li>
+          <li v-if="data.person.location">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" /></svg>
+            <span>{{ data.person.location }}</span>
+          </li>
+          <li v-if="data.person.linkedin_url">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z" /></svg>
+            <a class="cv-contact-link" :href="data.person.linkedin_url">{{ data.person.first_name }} {{ data.person.last_name }}</a>
+          </li>
+          <li v-if="data.person.driver_license">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" /></svg>
+            <span>{{ data.person.driver_license }}</span>
+          </li>
+          <li v-if="data.person.birth_date">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" /></svg>
+            <span>Né le {{ data.person.birth_date }}</span>
+          </li>
         </ul>
       </section>
 
@@ -156,7 +187,7 @@ const linkedinDisplay = computed(() =>
   object-fit: cover;
   border-radius: 50%;
   margin: 0 auto 7mm;
-  border: 1.5pt solid #3b82f6;
+  border: 1.5pt solid #10b981;
 }
 
 .cv-side-section {
@@ -165,10 +196,10 @@ const linkedinDisplay = computed(() =>
 
 .cv-side-title {
   font-size: 8.5pt;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #60a5fa;
+  color: #34d399;
   margin: 0 0 2mm;
   padding-bottom: 1mm;
   border-bottom: 0.5pt solid rgba(148, 163, 184, 0.35);
@@ -182,8 +213,26 @@ const linkedinDisplay = computed(() =>
 }
 
 .cv-contact li {
-  margin-bottom: 1.2mm;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.8mm;
+  margin-bottom: 1.4mm;
   word-break: break-word;
+}
+
+/* Icônes discrètes : teinte atténuée, alignées sur la 1re ligne de texte. */
+.cv-ico {
+  width: 2.8mm;
+  height: 2.8mm;
+  flex-shrink: 0;
+  margin-top: 0.45mm;
+  fill: #94a3b8;
+}
+
+/* Lien cliquable dans le PDF, sans style de lien visible. */
+.cv-contact-link {
+  color: inherit;
+  text-decoration: none;
 }
 
 .cv-domain {
@@ -247,7 +296,7 @@ const linkedinDisplay = computed(() =>
 }
 
 .cv-lastname {
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .cv-headline {
@@ -274,7 +323,7 @@ const linkedinDisplay = computed(() =>
   align-items: center;
   gap: 2.5mm;
   font-size: 10pt;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #0f172a;

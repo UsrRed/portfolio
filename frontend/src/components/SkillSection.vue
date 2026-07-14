@@ -179,15 +179,24 @@ function deleteLabel(): string | undefined {
               :key="skill.id"
               class="skill-card stagger-item"
               :class="{ flipped: !adminMode && flipped === skill.id }"
+              role="button"
+              tabindex="0"
+              :aria-expanded="flipped === skill.id"
               @click="toggle(skill.id)"
+              @keydown.enter.prevent="toggle(skill.id)"
+              @keydown.space.prevent="toggle(skill.id)"
               :title="adminMode ? '' : (flipped === skill.id ? 'Cliquer pour fermer' : 'Cliquer pour voir les détails')"
             >
               <div class="skill-inner">
                 <div class="skill-front">
                   <img
                     :src="skill.image_url"
-                    :alt="skill.name"
+                    :alt="'Logo ' + skill.name"
                     class="skill-img"
+                    width="52"
+                    height="52"
+                    loading="lazy"
+                    decoding="async"
                     @error="($event.target as HTMLImageElement).style.display='none'"
                   />
                   <p class="skill-name">{{ skill.name }}</p>
@@ -393,8 +402,8 @@ function deleteLabel(): string | undefined {
 
 .skill-back {
   transform: rotateY(180deg);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(56, 189, 248, 0.06));
-  border-color: rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), rgba(var(--accent-rgb), 0.06));
+  border-color: rgba(var(--primary-rgb), 0.3);
   padding: 1rem;
 }
 

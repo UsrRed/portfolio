@@ -102,7 +102,7 @@ async function save() {
       <div class="hero-text">
         <p class="hero-eyebrow">
           <span class="eyebrow-dot"></span>
-          Portfolio professionnel
+          <span class="eyebrow-prompt">~$</span> whoami
         </p>
 
         <h1 class="hero-name">
@@ -145,7 +145,7 @@ async function save() {
         </div>
 
         <div class="hero-actions">
-          <a v-if="person.linkedin_url" :href="person.linkedin_url" class="btn btn-primary" target="_blank">
+          <a v-if="person.linkedin_url" :href="person.linkedin_url" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/>
               <circle cx="4" cy="4" r="2"/>
@@ -182,10 +182,20 @@ async function save() {
           class="portrait-frame"
           :style="{ transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }"
         >
+          <div class="portrait-bar" aria-hidden="true">
+            <span class="bar-dot bar-dot--red"></span>
+            <span class="bar-dot bar-dot--yellow"></span>
+            <span class="bar-dot bar-dot--green"></span>
+            <span class="bar-file">{{ person.first_name.toLowerCase() }}.jpg</span>
+          </div>
           <img
             :src="person.image_url"
-            :alt="person.first_name + ' ' + person.last_name"
+            :alt="'Portrait de ' + person.first_name + ' ' + person.last_name"
             class="portrait-img"
+            width="320"
+            height="400"
+            fetchpriority="high"
+            decoding="async"
           />
         </div>
         <div class="portrait-accent"></div>
@@ -263,8 +273,8 @@ async function save() {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(148, 184, 163, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 184, 163, 0.05) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 30%, transparent 75%);
   -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 30%, transparent 75%);
@@ -276,7 +286,7 @@ async function save() {
   height: 500px;
   top: -180px;
   right: -160px;
-  background: radial-gradient(ellipse, rgba(37, 99, 235, 0.16), transparent 65%);
+  background: radial-gradient(ellipse, rgba(5, 150, 105, 0.16), transparent 65%);
   filter: blur(20px);
   animation: glowDrift 14s ease-in-out infinite alternate;
 }
@@ -320,16 +330,21 @@ async function save() {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--text-muted);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   padding: 0.4rem 0.95rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   margin-bottom: 1.75rem;
+}
+
+.eyebrow-prompt {
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .eyebrow-dot {
@@ -343,7 +358,7 @@ async function save() {
 
 .hero-name {
   font-size: clamp(2.6rem, 6.5vw, 4.5rem);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.035em;
   color: var(--text);
@@ -354,9 +369,10 @@ async function save() {
 }
 
 .hero-title {
-  font-size: 1.15rem;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
   color: var(--secondary);
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 1rem;
   min-height: 1.75em;
 }
@@ -448,21 +464,50 @@ async function save() {
 
 .portrait-frame {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(320px, 70vw);
-  aspect-ratio: 4 / 5;
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bg-elevated);
   box-shadow: var(--shadow-lg);
   z-index: 1;
   transition: transform 0.25s ease-out;
   will-change: transform;
 }
 
+/* Barre de fenêtre façon terminal */
+.portrait-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 0.9rem;
+  background: rgba(148, 184, 163, 0.06);
+  border-bottom: 1px solid var(--border);
+}
+
+.bar-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.bar-dot--red { background: #f87171; }
+.bar-dot--yellow { background: #fbbf24; }
+.bar-dot--green { background: #34d399; }
+
+.bar-file {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
 .portrait-img {
   width: 100%;
-  height: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
   object-fit: cover;
   display: block;
 }
@@ -470,7 +515,7 @@ async function save() {
 .portrait-accent {
   position: absolute;
   inset: 1.25rem -1.25rem -1.25rem 1.25rem;
-  border: 1px solid rgba(59, 130, 246, 0.35);
+  border: 1px solid rgba(var(--primary-rgb), 0.35);
   border-radius: var(--radius-lg);
   z-index: 0;
   animation: accentFloat 6s ease-in-out infinite;

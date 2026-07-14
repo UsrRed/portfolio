@@ -183,7 +183,7 @@ async function pick(result: ImageSearchResult) {
   gap: 0.35rem;
   padding: 0.5rem 0.875rem;
   background: var(--primary-dim);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(var(--primary-rgb), 0.3);
   border-radius: var(--radius-sm);
   color: var(--primary);
   font-size: 0.82rem;
@@ -194,7 +194,7 @@ async function pick(result: ImageSearchResult) {
 }
 
 .upload-btn:hover:not(.loading) {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(var(--primary-rgb), 0.2);
 }
 
 .upload-btn.loading {
@@ -203,7 +203,7 @@ async function pick(result: ImageSearchResult) {
 }
 
 .upload-btn.active {
-  background: rgba(59, 130, 246, 0.25);
+  background: rgba(var(--primary-rgb), 0.25);
 }
 
 .search-panel {

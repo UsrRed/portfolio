@@ -85,7 +85,7 @@ async function deleteItem() {
       <div class="softskills-grid">
         <div v-for="skill in localItems" :key="skill.id" class="soft-card card stagger-item">
           <div class="soft-img-wrap">
-            <img :src="skill.image_url" :alt="skill.name" class="soft-img" />
+            <img :src="skill.image_url" :alt="skill.name" class="soft-img" width="56" height="56" loading="lazy" decoding="async" />
           </div>
           <p class="soft-name">{{ skill.name }}</p>
           <button v-if="adminMode" class="item-edit-btn" @click="openEdit(skill)" title="Modifier">
@@ -173,7 +173,7 @@ async function deleteItem() {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-dim), rgba(56, 189, 248, 0.1));
+  background: linear-gradient(135deg, var(--primary-dim), rgba(var(--accent-rgb), 0.1));
   display: flex;
   align-items: center;
   justify-content: center;

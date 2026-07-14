@@ -95,6 +95,7 @@ type Project struct {
 	SkillsHuman string `json:"skills_human,omitempty"`
 	SkillsTech  string `json:"skills_tech,omitempty"`
 	LinkURL     string `json:"link_url,omitempty"`
+	Hidden      bool   `json:"hidden"`
 }
 
 type PortfolioData struct {
@@ -109,6 +110,9 @@ type PortfolioData struct {
 }
 
 var db *sql.DB
+
+// En prod (admin désactivé), les projets masqués sont exclus de /api/get-data.
+var adminEnabled bool
 
 func setCORSHeaders(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
@@ -152,11 +156,18 @@ func main() {
 		log.Fatalf("Cannot connect to database: %v", err)
 	}
 
+	// Les volumes créés avant l'ajout de la colonne n'ont pas rejoué init.sql
+	if _, err = db.Exec("ALTER TABLE project ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NULL DEFAULT FALSE"); err != nil {
+		log.Fatalf("Cannot migrate project table: %v", err)
+	}
+
 	http.HandleFunc("/api/get-data", getDataHandler)
 
-	adminEnabled := os.Getenv("ENABLE_ADMIN") == "true"
+	adminEnabled = os.Getenv("ENABLE_ADMIN") == "true"
 
-	if os.Getenv("ENABLE_ADD_PROJECT") != "false" || adminEnabled {
+	// Default-deny : les mutations ne sont exposées que si explicitement activées.
+	// (L'ancienne condition != "false" ouvrait l'endpoint quand la variable était absente.)
+	if os.Getenv("ENABLE_ADD_PROJECT") == "true" || adminEnabled {
 		http.HandleFunc("/api/projects", projectsHandler)
 		http.HandleFunc("/api/projects/", projectsHandler)
 		log.Println("Projects endpoint enabled")
@@ -986,9 +997,9 @@ func projectsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		err := db.QueryRow(
-			`INSERT INTO project (person_id, title, image_url, period, description, skills_human, skills_tech, link_url)
-			 VALUES (1, $1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-			p.Title, p.ImageURL, p.Period, p.Description, p.SkillsHuman, p.SkillsTech, p.LinkURL,
+			`INSERT INTO project (person_id, title, image_url, period, description, skills_human, skills_tech, link_url, hidden)
+			 VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+			p.Title, p.ImageURL, p.Period, p.Description, p.SkillsHuman, p.SkillsTech, p.LinkURL, p.Hidden,
 		).Scan(&p.ID)
 		if err != nil {
 			log.Printf("Error inserting project: %v", err)
@@ -1014,8 +1025,8 @@ func projectsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if _, err := db.Exec(
-			"UPDATE project SET title=$1, image_url=$2, period=$3, description=$4, skills_human=$5, skills_tech=$6, link_url=$7 WHERE id=$8",
-			p.Title, p.ImageURL, p.Period, p.Description, p.SkillsHuman, p.SkillsTech, p.LinkURL, id,
+			"UPDATE project SET title=$1, image_url=$2, period=$3, description=$4, skills_human=$5, skills_tech=$6, link_url=$7, hidden=$8 WHERE id=$9",
+			p.Title, p.ImageURL, p.Period, p.Description, p.SkillsHuman, p.SkillsTech, p.LinkURL, p.Hidden, id,
 		); err != nil {
 			log.Printf("Error updating project: %v", err)
 			http.Error(w, "Database error", http.StatusInternalServerError)
@@ -1049,7 +1060,7 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		return nil, fmt.Errorf("error fetching person: %v", err)
 	}
 
-	domainRows, err := db.Query("SELECT id, name FROM domain")
+	domainRows, err := db.Query("SELECT id, name FROM domain ORDER BY id ASC")
 	if err != nil {
 		return nil, fmt.Errorf("error fetching domains: %v", err)
 	}
@@ -1060,7 +1071,7 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		if err := domainRows.Scan(&d.ID, &d.Name); err != nil {
 			return nil, err
 		}
-		skillRows, err := db.Query("SELECT id, domain_id, name, COALESCE(image_url, ''), COALESCE(details, '') FROM skill WHERE domain_id = $1", d.ID)
+		skillRows, err := db.Query("SELECT id, domain_id, name, COALESCE(image_url, ''), COALESCE(details, '') FROM skill WHERE domain_id = $1 ORDER BY id ASC", d.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -1141,14 +1152,18 @@ func fetchPortfolioData() (*PortfolioData, error) {
 		p.Experiences = append(p.Experiences, e)
 	}
 
-	projRows, err := db.Query("SELECT id, title, COALESCE(image_url, ''), COALESCE(period, ''), COALESCE(description, ''), COALESCE(skills_human, ''), COALESCE(skills_tech, ''), COALESCE(link_url, '') FROM project WHERE person_id = $1 ORDER BY id ASC", p.Person.ID)
+	projQuery := "SELECT id, title, COALESCE(image_url, ''), COALESCE(period, ''), COALESCE(description, ''), COALESCE(skills_human, ''), COALESCE(skills_tech, ''), COALESCE(link_url, ''), hidden FROM project WHERE person_id = $1"
+	if !adminEnabled {
+		projQuery += " AND NOT hidden"
+	}
+	projRows, err := db.Query(projQuery+" ORDER BY id ASC", p.Person.ID)
 	if err != nil {
 		return nil, err
 	}
 	defer projRows.Close()
 	for projRows.Next() {
 		var pr Project
-		if err := projRows.Scan(&pr.ID, &pr.Title, &pr.ImageURL, &pr.Period, &pr.Description, &pr.SkillsHuman, &pr.SkillsTech, &pr.LinkURL); err != nil {
+		if err := projRows.Scan(&pr.ID, &pr.Title, &pr.ImageURL, &pr.Period, &pr.Description, &pr.SkillsHuman, &pr.SkillsTech, &pr.LinkURL, &pr.Hidden); err != nil {
 			return nil, err
 		}
 		p.Projects = append(p.Projects, pr)

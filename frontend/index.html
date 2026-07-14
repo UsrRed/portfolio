@@ -2,16 +2,62 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Yohann DENOYELLE — Portfolio</title>
-    <meta name="description" content="Portfolio professionnel — compétences, expériences, formations et projets." />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- SEO -->
+    <title>Yohann Denoyelle — Réseaux &amp; Télécommunications | Portfolio</title>
+    <meta name="description" content="Portfolio de Yohann Denoyelle, étudiant en BUT Réseaux & Télécommunications : compétences en réseaux, cybersécurité et développement, projets, formations et expériences. CV téléchargeable en PDF." />
+    <meta name="author" content="Yohann Denoyelle" />
+    <link rel="canonical" href="https://yohann.denoyelle.eu/" />
+    <meta name="theme-color" content="#060a08" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="profile" />
+    <meta property="og:site_name" content="Portfolio de Yohann Denoyelle" />
+    <meta property="og:title" content="Yohann Denoyelle — Réseaux & Télécommunications | Portfolio" />
+    <meta property="og:description" content="Compétences en réseaux, cybersécurité et développement — projets, formations et expériences." />
+    <meta property="og:url" content="https://yohann.denoyelle.eu/" />
+    <!-- TODO : remplacer par une image de couverture dédiée 1200×630 (og-cover.png) -->
+    <meta property="og:image" content="https://yohann.denoyelle.eu/images/Yohann.jpeg" />
+    <meta property="og:locale" content="fr_FR" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Yohann Denoyelle — Réseaux & Télécommunications | Portfolio" />
+    <meta name="twitter:description" content="Compétences en réseaux, cybersécurité et développement — projets, formations et expériences." />
+    <meta name="twitter:image" content="https://yohann.denoyelle.eu/images/Yohann.jpeg" />
+
+    <!-- Données structurées -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ProfilePage",
+      "mainEntity": {
+        "@type": "Person",
+        "name": "Yohann Denoyelle",
+        "url": "https://yohann.denoyelle.eu/",
+        "jobTitle": "Étudiant en BUT Réseaux et Télécommunications",
+        "knowsAbout": ["Réseaux informatiques", "Cybersécurité", "Télécommunications", "Développement web", "Administration système"],
+        "knowsLanguage": "fr"
+      }
+    }
+    </script>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="app"></div>
+    <noscript>
+      <main style="font-family: sans-serif; max-width: 640px; margin: 4rem auto; padding: 0 1.5rem;">
+        <h1>Yohann Denoyelle</h1>
+        <p>Étudiant en BUT Réseaux et Télécommunications. Portfolio : compétences en réseaux, cybersécurité et développement, projets, formations et expériences.</p>
+        <p>Ce site nécessite JavaScript pour afficher son contenu complet.</p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -26,8 +26,12 @@ fi
 BACKUP_DIR="backups"
 mkdir -p "$BACKUP_DIR"
 
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-ARCHIVE="${BACKUP_DIR}/data_export_${TIMESTAMP}.tar.gz"
+# Numéro de version auto-incrémenté (v1, v2, v3...) d'après les backups existantes
+LAST_V=$(ls -1 "$BACKUP_DIR"/v[0-9]*_*.tar.gz 2>/dev/null \
+    | sed -E 's|.*/v([0-9]+)_.*|\1|' | sort -n | tail -1)
+NEXT_V=$(( ${LAST_V:-0} + 1 ))
+TIMESTAMP=$(date +%F_%Hh%M)
+ARCHIVE="${BACKUP_DIR}/v${NEXT_V}_${TIMESTAMP}.tar.gz"
 # Temp dir dans le projet : docker installé via snap ne peut pas monter /tmp
 TMP_DIR=$(mktemp -d "${SCRIPT_DIR}/.backup_tmp.XXXXXX")
 trap "rm -rf '$TMP_DIR'" EXIT

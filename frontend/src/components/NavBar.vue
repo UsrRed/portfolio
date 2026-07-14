@@ -61,6 +61,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
         :class="{ open: menuOpen }"
         @click="menuOpen = !menuOpen"
         aria-label="Menu"
+        :aria-expanded="menuOpen"
       >
         <span></span>
         <span></span>
@@ -68,12 +69,12 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
       </button>
 
       <ul class="navbar-links" :class="{ open: menuOpen }">
-        <li v-for="link in links" :key="link.href">
+        <li v-for="(link, i) in links" :key="link.href">
           <a
             :href="link.href"
             :class="{ active: activeSection === link.href }"
             @click="menuOpen = false"
-          >{{ link.label }}</a>
+          ><span class="link-num">0{{ i }}.</span>{{ link.label }}</a>
         </li>
         <li>
           <button class="cv-btn" @click="printCv" title="Enregistrer le CV en PDF (Ctrl+P)">
@@ -115,11 +116,11 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 }
 
 .navbar--scrolled {
-  background: rgba(7, 11, 20, 0.88);
+  background: rgba(6, 10, 8, 0.88);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
   padding: 0.7rem 0;
-  box-shadow: 0 4px 30px rgba(2, 6, 16, 0.45);
+  box-shadow: 0 4px 30px rgba(3, 8, 5, 0.45);
 }
 
 .scroll-progress {
@@ -145,7 +146,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
   align-items: center;
   gap: 0.65rem;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1rem;
   color: var(--text);
   text-decoration: none;
@@ -158,13 +159,14 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--grad);
-  color: white;
+  color: #04140d;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.02em;
-  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 2px 12px rgba(var(--primary-rgb), 0.35);
 }
 
 .navbar-links {
@@ -184,6 +186,14 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
   font-weight: 500;
   border-radius: var(--radius-sm);
   transition: var(--transition);
+}
+
+.link-num {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--primary);
+  margin-right: 0.4rem;
 }
 
 .navbar-links a::after {
@@ -219,20 +229,20 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
   gap: 0.45rem;
   padding: 0.48rem 1.05rem;
   margin-left: 0.5rem;
-  background: var(--primary-strong);
+  background: var(--primary);
   border: none;
   border-radius: var(--radius-sm);
-  color: white;
+  color: #04140d;
   font-size: 0.84rem;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 2px 12px rgba(var(--primary-rgb), 0.3);
 }
 
 .cv-btn:hover {
-  background: var(--primary);
+  background: var(--secondary);
   transform: translateY(-1px);
 }
 
@@ -316,7 +326,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
     right: 0;
     flex-direction: column;
     align-items: stretch;
-    background: rgba(11, 17, 32, 0.97);
+    background: rgba(10, 17, 13, 0.97);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     padding: 1rem 1.5rem;

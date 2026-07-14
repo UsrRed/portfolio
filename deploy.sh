@@ -141,36 +141,39 @@ EXTRA_DOWN_FLAGS="--remove-orphans"
 RESTORE_ARCHIVE=""
 BACKUP_DIR="./backups"
 
-if [ "$IS_PROD" = true ]; then
-    # En prod : proposition de supprimer complètement la BDD
-    # et de recharger la dernière backup du dossier backups/ (hors git).
-    LATEST_BACKUP=$(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null | head -1 || true)
+echo -ne "   ${YELLOW}Supprimer complètement la BDD (réinitialisée depuis init.sql) ?${NC} [y/N] " >&2; read -r rep </dev/tty
+if [[ "$rep" =~ ^[Yy]$ ]]; then
+    EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
 
-    if [ -n "$LATEST_BACKUP" ]; then
-        SIZE=$(du -sh "$LATEST_BACKUP" 2>/dev/null | cut -f1)
-        echo -e "   ${BLUE}Dernière backup disponible : $(basename "$LATEST_BACKUP") (${SIZE})${NC}"
-        echo -ne "   ${YELLOW}Supprimer complètement la BDD et recharger cette backup ?${NC} [y/N] " >&2; read -r rep </dev/tty
-        if [[ "$rep" =~ ^[Yy]$ ]]; then
-            EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
-            RESTORE_ARCHIVE="$LATEST_BACKUP"
-            echo -e "${GREEN}   → La BDD sera réinitialisée puis restaurée depuis la backup.${NC}"
+    # Liste des backups, la plus récente en premier
+    mapfile -t BACKUPS < <(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null)
+
+    if [ ${#BACKUPS[@]} -gt 0 ]; then
+        echo -e "   ${BLUE}Backups disponibles :${NC}"
+        i=1
+        for f in "${BACKUPS[@]}"; do
+            SIZE=$(du -sh "$f" 2>/dev/null | cut -f1)
+            if [ $i -eq 1 ]; then
+                echo -e "     ${i}) $(basename "$f") (${SIZE}) ${GREEN}← dernière${NC}"
+            else
+                echo -e "     ${i}) $(basename "$f") (${SIZE})"
+            fi
+            i=$((i+1))
+        done
+        echo -e "     0) Aucune — BDD vierge (init.sql seulement)"
+        echo -ne "   ${YELLOW}Backup à charger ?${NC} [1] " >&2; read -r choice </dev/tty
+        choice=${choice:-1}
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#BACKUPS[@]} ]; then
+            RESTORE_ARCHIVE="${BACKUPS[$((choice-1))]}"
+            echo -e "${GREEN}   → La BDD sera restaurée depuis $(basename "$RESTORE_ARCHIVE").${NC}"
         else
-            echo -e "${BLUE}   → Données actuelles conservées.${NC}"
+            echo -e "${BLUE}   → BDD vierge (init.sql seulement).${NC}"
         fi
     else
-        echo -e "   ${BLUE}Aucune backup dans ${BACKUP_DIR}/ (générer avec ./export.sh --prod).${NC}"
-        echo -ne "   ${YELLOW}Supprimer quand même les volumes (BDD réinitialisée depuis init.sql) ?${NC} [y/N] " >&2; read -r rep </dev/tty
-        if [[ "$rep" =~ ^[Yy]$ ]]; then
-            EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
-            echo -e "${GREEN}   → Volumes inclus dans le nettoyage.${NC}"
-        fi
+        echo -e "   ${BLUE}Aucune backup dans ${BACKUP_DIR}/ (générer avec ./export.sh) — BDD vierge (init.sql).${NC}"
     fi
 else
-    echo -ne "   ${YELLOW}Supprimer aussi les volumes Docker (DB réinitialisée depuis zéro) ?${NC} [y/N] " >&2; read -r rep </dev/tty
-    if [[ "$rep" =~ ^[Yy]$ ]]; then
-        EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
-        echo -e "${GREEN}   → Volumes inclus dans le nettoyage.${NC}"
-    fi
+    echo -e "${BLUE}   → Données actuelles conservées.${NC}"
 fi
 
 docker compose $COMPOSE_FILES down $EXTRA_DOWN_FLAGS || error_exit "Nettoyage"

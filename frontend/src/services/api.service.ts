@@ -6,6 +6,7 @@ export interface ProjectPayload {
   skills_human: string
   skills_tech: string
   link_url: string
+  hidden?: boolean
 }
 
 export interface ImageSearchResult {
