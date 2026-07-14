@@ -50,66 +50,27 @@ const projects = computed(() =>
   sortRecent(props.data.projects?.filter((p: any) => !p.hidden), (p) => [p.period], MAX_PROJECTS)
 )
 
+// URL LinkedIn affichée en clair (sans protocole ni sous-domaine) : les
+// parseurs ATS détectent le profil par l'URL visible, pas par la cible du
+// lien. Affichée sur une seule ligne : une césure au tiret du pseudo
+// corromprait l'URL extraite du PDF (dé-hyphénisation des parseurs).
+const linkedinLabel = computed(() =>
+  (props.data.person.linkedin_url ?? '')
+    .replace(/^https?:\/\//, '')
+    .replace(/^([a-z]{2,3}\.)?(www\.)?(?=linkedin\.)/, '')
+    .replace(/\/$/, '')
+)
+
+// Lien tel: sans espaces ni points pour être cliquable partout.
+const phoneHref = computed(() => 'tel:' + (props.data.person.phone ?? '').replace(/[^+\d]/g, ''))
+
 </script>
 
 <template>
   <div class="cv-print">
-    <!-- Colonne latérale -->
-    <aside class="cv-side">
-      <img v-if="data.person.image_url" :src="data.person.image_url" alt="" class="cv-photo" />
-
-      <section class="cv-side-section">
-        <h2 class="cv-side-title">Contact</h2>
-        <ul class="cv-contact">
-          <li v-if="data.person.location">
-            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" /></svg>
-            <span>{{ data.person.location }}</span>
-          </li>
-          <li v-if="data.person.linkedin_url">
-            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z" /></svg>
-            <a class="cv-contact-link" :href="data.person.linkedin_url">{{ data.person.first_name }} {{ data.person.last_name }}</a>
-          </li>
-          <li v-if="data.person.driver_license">
-            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" /></svg>
-            <span>{{ data.person.driver_license }}</span>
-          </li>
-          <li v-if="data.person.birth_date">
-            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" /></svg>
-            <span>Né le {{ data.person.birth_date }}</span>
-          </li>
-        </ul>
-      </section>
-
-      <section v-if="data.domains?.some((d: any) => d.skills?.length)" class="cv-side-section">
-        <h2 class="cv-side-title">Compétences</h2>
-        <div v-for="domain in data.domains.filter((d: any) => d.skills?.length)" :key="domain.id" class="cv-domain">
-          <h3 class="cv-domain-name">{{ domain.name }}</h3>
-          <p class="cv-side-text">{{ domain.skills.map((s: any) => s.name).join(' · ') }}</p>
-        </div>
-      </section>
-
-      <section v-if="data.languages?.length" class="cv-side-section">
-        <h2 class="cv-side-title">Langues</h2>
-        <ul class="cv-lang-list">
-          <li v-for="lang in data.languages" :key="lang.id">
-            <span class="cv-lang-name">{{ lang.name }}</span>
-            <span v-if="lang.level" class="cv-lang-level">{{ lang.level }}</span>
-          </li>
-        </ul>
-      </section>
-
-      <section v-if="data.soft_skills?.length" class="cv-side-section">
-        <h2 class="cv-side-title">Savoir-être</h2>
-        <p class="cv-side-text">{{ data.soft_skills.map((s: any) => s.name).join(' · ') }}</p>
-      </section>
-
-      <section v-if="data.hobbies?.length" class="cv-side-section">
-        <h2 class="cv-side-title">Centres d'intérêt</h2>
-        <p class="cv-side-text">{{ data.hobbies.map((h: any) => h.name).join(' · ') }}</p>
-      </section>
-    </aside>
-
-    <!-- Colonne principale -->
+    <!-- Colonne principale : première dans le DOM pour que le flux texte
+         du PDF commence par nom → titre → expériences (ordre attendu par
+         les parseurs ATS). La position visuelle est gérée par la grille. -->
     <main class="cv-main">
       <header class="cv-header">
         <h1 class="cv-name">{{ data.person.first_name }} <span class="cv-lastname">{{ data.person.last_name }}</span></h1>
@@ -153,6 +114,69 @@ const projects = computed(() =>
         </article>
       </section>
     </main>
+
+    <!-- Colonne latérale -->
+    <aside class="cv-side">
+      <img v-if="data.person.image_url" :src="data.person.image_url" alt="" class="cv-photo" />
+
+      <section class="cv-side-section">
+        <h2 class="cv-side-title">Contact</h2>
+        <ul class="cv-contact">
+          <li v-if="data.person.email">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z" /></svg>
+            <a class="cv-contact-link" :href="'mailto:' + data.person.email">{{ data.person.email }}</a>
+          </li>
+          <li v-if="data.person.phone">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
+            <a class="cv-contact-link" :href="phoneHref">{{ data.person.phone }}</a>
+          </li>
+          <li v-if="data.person.location">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" /></svg>
+            <span>{{ data.person.location }}</span>
+          </li>
+          <li v-if="data.person.linkedin_url">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z" /></svg>
+            <a class="cv-contact-link cv-contact-link--url" :href="data.person.linkedin_url">{{ linkedinLabel }}</a>
+          </li>
+          <li v-if="data.person.driver_license">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" /></svg>
+            <span>{{ data.person.driver_license }}</span>
+          </li>
+          <li v-if="data.person.birth_date">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" /></svg>
+            <span>Né le {{ data.person.birth_date }}</span>
+          </li>
+        </ul>
+      </section>
+
+      <section v-if="data.domains?.some((d: any) => d.skills?.length)" class="cv-side-section">
+        <h2 class="cv-side-title">Compétences</h2>
+        <div v-for="domain in data.domains.filter((d: any) => d.skills?.length)" :key="domain.id" class="cv-domain">
+          <h3 class="cv-domain-name">{{ domain.name }}</h3>
+          <p class="cv-side-text">{{ domain.skills.map((s: any) => s.name).join(' · ') }}</p>
+        </div>
+      </section>
+
+      <section v-if="data.languages?.length" class="cv-side-section">
+        <h2 class="cv-side-title">Langues</h2>
+        <ul class="cv-lang-list">
+          <li v-for="lang in data.languages" :key="lang.id">
+            <span class="cv-lang-name">{{ lang.name }}</span>
+            <span v-if="lang.level" class="cv-lang-level">{{ lang.level }}</span>
+          </li>
+        </ul>
+      </section>
+
+      <section v-if="data.soft_skills?.length" class="cv-side-section">
+        <h2 class="cv-side-title">Savoir-être</h2>
+        <p class="cv-side-text">{{ data.soft_skills.map((s: any) => s.name).join(' · ') }}</p>
+      </section>
+
+      <section v-if="data.hobbies?.length" class="cv-side-section">
+        <h2 class="cv-side-title">Centres d'intérêt</h2>
+        <p class="cv-side-text">{{ data.hobbies.map((h: any) => h.name).join(' · ') }}</p>
+      </section>
+    </aside>
   </div>
 </template>
 
@@ -172,10 +196,17 @@ const projects = computed(() =>
   background: linear-gradient(to right, #0f172a 60mm, #ffffff 60mm);
   font-size: 9pt;
   line-height: 1.4;
+  /* Les ligatures (fi, ffi…) sont encodées en glyphes spéciaux dans le PDF
+     et cassent l'extraction de texte de certains parseurs ATS. */
+  font-variant-ligatures: none;
 }
 
-/* ── Colonne latérale ── */
+/* ── Colonne latérale ──
+   Placée après <main> dans le DOM (ordre de lecture ATS) mais affichée
+   à gauche via un placement de grille explicite. */
 .cv-side {
+  grid-column: 1;
+  grid-row: 1;
   padding: 12mm 7mm 10mm;
   color: #cbd5e1;
 }
@@ -235,6 +266,12 @@ const projects = computed(() =>
   text-decoration: none;
 }
 
+/* URL sur une seule ligne : une coupure au tiret fausse l'extraction ATS. */
+.cv-contact-link--url {
+  white-space: nowrap;
+  font-size: 7.2pt;
+}
+
 .cv-domain {
   margin-bottom: 2.5mm;
 }
@@ -278,6 +315,8 @@ const projects = computed(() =>
 
 /* ── Colonne principale ── */
 .cv-main {
+  grid-column: 2;
+  grid-row: 1;
   padding: 12mm 10mm 10mm 9mm;
   min-width: 0;
 }

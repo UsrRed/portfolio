@@ -10,6 +10,18 @@ DROP TABLE IF EXISTS language CASCADE;
 DROP TABLE IF EXISTS hobby CASCADE;
 DROP TABLE IF EXISTS soft_skill CASCADE;
 DROP TABLE IF EXISTS person CASCADE;
+DROP TABLE IF EXISTS schema_migrations CASCADE;
+
+-- Suivi des migrations (voir ./migrate.sh). Les migrations listées ici sont
+-- déjà intégrées à ce schéma initial : on les marque comme appliquées pour
+-- qu'elles ne soient pas rejouées sur une base neuve.
+CREATE TABLE schema_migrations (
+    filename   TEXT PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO schema_migrations (filename) VALUES
+    ('migration_2026-07-14_outils_vers_competences.sql'),
+    ('migration_2026-07-14_person_email_phone.sql');
 
 -- Create Person table
 CREATE TABLE person (
@@ -22,7 +34,11 @@ CREATE TABLE person (
     title VARCHAR(255),
     description TEXT,
     linkedin_url VARCHAR(255),
-    image_url VARCHAR(255)
+    image_url VARCHAR(255),
+    -- Contact affiché sur le CV (indispensable pour les parseurs ATS) :
+    -- valeurs à renseigner via l'interface admin du site.
+    email VARCHAR(255),
+    phone VARCHAR(50)
 );
 
 -- Create Domain table (Categories for skills)

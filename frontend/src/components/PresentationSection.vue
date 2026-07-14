@@ -15,6 +15,8 @@ interface Person {
   title?: string
   description: string
   linkedin_url?: string
+  email?: string
+  phone?: string
 }
 
 const props = defineProps<{ person: Person }>()
@@ -241,6 +243,16 @@ async function save() {
         <div class="form-field">
           <label class="field-label">Permis</label>
           <input class="field-input" v-model="form.driver_license" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="field-label">Email (affiché sur le CV)</label>
+          <input class="field-input" type="email" v-model="form.email" placeholder="prenom.nom@mail.com" />
+        </div>
+        <div class="form-field">
+          <label class="field-label">Téléphone (affiché sur le CV)</label>
+          <input class="field-input" type="tel" v-model="form.phone" placeholder="06 12 34 56 78" />
         </div>
       </div>
       <div class="form-field">

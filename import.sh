@@ -24,12 +24,13 @@ usage() {
 ARCHIVE=""
 COMPOSE_FILES=""
 ENV_LABEL="dev"
+ENV_FLAG=""
 BACKUP_DIR="backups"
 
 for arg in "$@"; do
     case "$arg" in
-        --prod) COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"; ENV_LABEL="production" ;;
-        --int)  COMPOSE_FILES="-f docker-compose.yml -f docker-compose.int.yml";  ENV_LABEL="intégration" ;;
+        --prod) COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"; ENV_LABEL="production"; ENV_FLAG="--prod" ;;
+        --int)  COMPOSE_FILES="-f docker-compose.yml -f docker-compose.int.yml";  ENV_LABEL="intégration"; ENV_FLAG="--int" ;;
         -h|--help) usage ;;
         *.tar.gz) ARCHIVE="$arg" ;;
     esac
@@ -70,6 +71,10 @@ if ! docker compose $COMPOSE_FILES exec -T db psql -U "$POSTGRES_USER" -d "$POST
     exit 1
 fi
 echo "    → Base de données restaurée"
+
+# La backup peut dater d'un schéma plus ancien que le code : rattrapage
+# des migrations, sinon l'API répond en erreur 500.
+"$SCRIPT_DIR/migrate.sh" $ENV_FLAG
 
 # 2. Uploads restore
 echo -e "${GREEN}[2/2] Restauration des fichiers uploadés...${NC}"

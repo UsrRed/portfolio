@@ -29,6 +29,8 @@ type Person struct {
 	Description   string `json:"description,omitempty"`
 	LinkedinURL   string `json:"linkedin_url,omitempty"`
 	ImageURL      string `json:"image_url,omitempty"`
+	Email         string `json:"email,omitempty"`
+	Phone         string `json:"phone,omitempty"`
 }
 
 type Domain struct {
@@ -474,8 +476,8 @@ func personHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err := db.Exec(
-		`UPDATE person SET first_name=$1, last_name=$2, title=$3, description=$4, location=$5, driver_license=$6, linkedin_url=$7, image_url=$8 WHERE id=1`,
-		p.FirstName, p.LastName, p.Title, p.Description, p.Location, p.DriverLicense, p.LinkedinURL, p.ImageURL,
+		`UPDATE person SET first_name=$1, last_name=$2, title=$3, description=$4, location=$5, driver_license=$6, linkedin_url=$7, image_url=$8, email=$9, phone=$10 WHERE id=1`,
+		p.FirstName, p.LastName, p.Title, p.Description, p.Location, p.DriverLicense, p.LinkedinURL, p.ImageURL, p.Email, p.Phone,
 	)
 	if err != nil {
 		log.Printf("Error updating person: %v", err)
@@ -1053,8 +1055,8 @@ func projectsHandler(w http.ResponseWriter, r *http.Request) {
 func fetchPortfolioData() (*PortfolioData, error) {
 	var p PortfolioData
 
-	err := db.QueryRow("SELECT id, first_name, last_name, COALESCE(to_char(birth_date, 'DD/MM/YYYY'), ''), COALESCE(driver_license, ''), COALESCE(location, ''), COALESCE(title, ''), COALESCE(description, ''), COALESCE(linkedin_url, ''), COALESCE(image_url, '') FROM person WHERE id = 1").Scan(
-		&p.Person.ID, &p.Person.FirstName, &p.Person.LastName, &p.Person.BirthDate, &p.Person.DriverLicense, &p.Person.Location, &p.Person.Title, &p.Person.Description, &p.Person.LinkedinURL, &p.Person.ImageURL,
+	err := db.QueryRow("SELECT id, first_name, last_name, COALESCE(to_char(birth_date, 'DD/MM/YYYY'), ''), COALESCE(driver_license, ''), COALESCE(location, ''), COALESCE(title, ''), COALESCE(description, ''), COALESCE(linkedin_url, ''), COALESCE(image_url, ''), COALESCE(email, ''), COALESCE(phone, '') FROM person WHERE id = 1").Scan(
+		&p.Person.ID, &p.Person.FirstName, &p.Person.LastName, &p.Person.BirthDate, &p.Person.DriverLicense, &p.Person.Location, &p.Person.Title, &p.Person.Description, &p.Person.LinkedinURL, &p.Person.ImageURL, &p.Person.Email, &p.Person.Phone,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching person: %v", err)

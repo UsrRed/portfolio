@@ -221,6 +221,11 @@ if [ -n "$RESTORE_ARCHIVE" ]; then
     echo -e "${GREEN}   ✔ Base de données restaurée.${NC}"
 fi
 
+# Migrations de schéma : indispensables dans tous les cas — BDD conservée
+# comme restaurée depuis une backup (le dump recrée l'ancien schéma), sinon
+# l'API attend des colonnes absentes et répond en erreur 500.
+./migrate.sh "$1" || error_exit "Migrations de schéma"
+
 # 3. Build Backend Go
 echo -e "${GREEN}[3/5] Construction de l'API Backend (Go)...${NC}"
 docker compose $COMPOSE_FILES build api || error_exit "Build API"
