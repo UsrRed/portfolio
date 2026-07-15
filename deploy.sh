@@ -293,7 +293,23 @@ docker compose $COMPOSE_FILES up -d frontend || error_exit "Lancement Frontend"
 if [ "$IS_PROD" = true ]; then
     echo -e "${GREEN}[+] Lancement du Proxy Traefik...${NC}"
     docker compose $COMPOSE_FILES up -d proxy || error_exit "Lancement Proxy"
-    echo -e "${BLUE}   → Certificat SSL (Let's Encrypt) émis et renouvelé automatiquement par Traefik.${NC}"
+
+    # Laisse à Traefik le temps de tenter l'émission ACME, puis détecte un
+    # éventuel rate-limit Let's Encrypt (max 5 certificats identiques / 7 jours).
+    # Dans ce cas Traefik sert son certificat auto-signé en attendant
+    # (ERR_CERT_AUTHORITY_INVALID côté navigateur).
+    sleep 10
+    RATE_LIMIT_AT=$(docker logs portfolio_proxy 2>&1 \
+        | grep -oP 'rateLimited.*?retry after \K[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}' \
+        | tail -1 || true)
+    if [ -n "$RATE_LIMIT_AT" ]; then
+        echo -e "${YELLOW}   ⚠ Rate-limit Let's Encrypt : émission refusée jusqu'au ${RATE_LIMIT_AT} UTC.${NC}"
+        echo -e "${YELLOW}     En attendant, le site sert le certificat auto-signé Traefik.${NC}"
+        echo -e "${YELLOW}     Pour retenter automatiquement à l'heure dite :${NC}"
+        echo -e "${YELLOW}       nohup ./retry-cert.sh >> retry-cert.log 2>&1 &${NC}"
+    else
+        echo -e "${BLUE}   → Certificat SSL (Let's Encrypt) émis et renouvelé automatiquement par Traefik.${NC}"
+    fi
 fi
 
 # 5. État final
