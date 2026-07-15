@@ -1,16 +1,42 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ApiService, type ImageSearchResult } from '../services/api.service'
+import ImageCropModal from './ImageCropModal.vue'
 
-const props = defineProps<{ modelValue: string; label?: string; searchQuery?: string }>()
+const props = defineProps<{ modelValue: string; label?: string; searchQuery?: string; aspect?: number }>()
 const emit = defineEmits<{ 'update:modelValue': [string] }>()
 
 const uploading = ref(false)
 const fileInput = ref<HTMLInputElement>()
+const cropFile = ref<File | null>(null)
 
-async function onFile(e: Event) {
+function onFile(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
+  if (props.aspect && file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+    cropFile.value = file
+  } else {
+    upload(file)
+  }
+}
+
+function onCropped(file: File) {
+  cropFile.value = null
+  upload(file)
+}
+
+function onCropSkip() {
+  const file = cropFile.value
+  cropFile.value = null
+  if (file) upload(file)
+}
+
+function onCropCancel() {
+  cropFile.value = null
+  if (fileInput.value) fileInput.value.value = ''
+}
+
+async function upload(file: File) {
   uploading.value = true
   try {
     const url = await ApiService.uploadImage(file)
@@ -147,6 +173,15 @@ async function pick(result: ImageSearchResult) {
     <div v-if="modelValue" class="img-preview">
       <img :src="modelValue" alt="preview" @error="($event.target as HTMLImageElement).style.display='none'" />
     </div>
+
+    <ImageCropModal
+      v-if="cropFile && aspect"
+      :file="cropFile"
+      :aspect="aspect"
+      @confirm="onCropped"
+      @skip="onCropSkip"
+      @cancel="onCropCancel"
+    />
   </div>
 </template>
 

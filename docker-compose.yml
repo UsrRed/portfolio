@@ -30,11 +30,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./db/structure:/docker-entrypoint-initdb.d
+      # Seul init.sql est joué à la création du volume. Les migrations
+      # (db/structure/migration_*.sql) sont appliquées par ./migrate.sh :
+      # les monter ici les ferait exécuter au premier boot, et un échec
+      # empêcherait PostgreSQL de démarrer (socket absente, psql en erreur).
+      - ./db/structure/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      # -h 127.0.0.1 : ne pas répondre "healthy" pendant l'init du volume,
+      # où un serveur temporaire (socket uniquement) exécute init.sql.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5

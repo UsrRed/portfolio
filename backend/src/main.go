@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"log"
 	"net/http"
@@ -220,6 +225,100 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
+// ─── IMAGE RESIZE ────────────────────────────────────────────────────────────
+
+// maxImageDim borne la plus grande dimension des images stockées : elles sont
+// affichées au plus en ~640px CSS, 1600px couvre large (rétina + zoom détail).
+const maxImageDim = 1600
+
+// boundImageBytes réduit une image JPEG/PNG trop grande et la ré-encode.
+// Tout autre format (GIF animé, WebP, SVG…) ou toute erreur → octets d'origine.
+func boundImageBytes(data []byte) []byte {
+	mime := http.DetectContentType(data)
+	if mime != "image/jpeg" && mime != "image/png" {
+		return data
+	}
+	src, format, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return data
+	}
+	b := src.Bounds()
+	if b.Dx() <= maxImageDim && b.Dy() <= maxImageDim {
+		return data
+	}
+	dst := downscale(src, maxImageDim)
+
+	var buf bytes.Buffer
+	switch format {
+	case "jpeg":
+		err = jpeg.Encode(&buf, dst, &jpeg.Options{Quality: 85})
+	case "png":
+		enc := png.Encoder{CompressionLevel: png.BestCompression}
+		err = enc.Encode(&buf, dst)
+	default:
+		return data
+	}
+	if err != nil || buf.Len() >= len(data) {
+		return data
+	}
+	log.Printf("Image resized: %dx%d -> %dx%d (%d -> %d bytes)",
+		b.Dx(), b.Dy(), dst.Bounds().Dx(), dst.Bounds().Dy(), len(data), buf.Len())
+	return buf.Bytes()
+}
+
+// downscale réduit src pour que sa plus grande dimension soit maxDim,
+// par moyenne de zone (box filter) — adapté aux fortes réductions, stdlib only.
+func downscale(src image.Image, maxDim int) *image.RGBA {
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	scale := float64(maxDim) / float64(w)
+	if h > w {
+		scale = float64(maxDim) / float64(h)
+	}
+	nw := int(float64(w)*scale + 0.5)
+	nh := int(float64(h)*scale + 0.5)
+	if nw < 1 {
+		nw = 1
+	}
+	if nh < 1 {
+		nh = 1
+	}
+
+	dst := image.NewRGBA(image.Rect(0, 0, nw, nh))
+	for y := 0; y < nh; y++ {
+		sy0, sy1 := y*h/nh, (y+1)*h/nh
+		if sy1 <= sy0 {
+			sy1 = sy0 + 1
+		}
+		for x := 0; x < nw; x++ {
+			sx0, sx1 := x*w/nw, (x+1)*w/nw
+			if sx1 <= sx0 {
+				sx1 = sx0 + 1
+			}
+			var r, g, bl, a, n uint64
+			for sy := sy0; sy < sy1; sy++ {
+				for sx := sx0; sx < sx1; sx++ {
+					// RGBA() renvoie des composantes prémultipliées : leur moyenne
+					// directe est correcte, y compris sur les bords transparents.
+					pr, pg, pb, pa := src.At(b.Min.X+sx, b.Min.Y+sy).RGBA()
+					r += uint64(pr)
+					g += uint64(pg)
+					bl += uint64(pb)
+					a += uint64(pa)
+					n++
+				}
+			}
+			dst.SetRGBA(x, y, color.RGBA{
+				R: uint8(r / n >> 8),
+				G: uint8(g / n >> 8),
+				B: uint8(bl / n >> 8),
+				A: uint8(a / n >> 8),
+			})
+		}
+	}
+	return dst
+}
+
 // ─── UPLOAD ──────────────────────────────────────────────────────────────────
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -246,21 +345,22 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
 
+	data, err := io.ReadAll(file)
+	if err != nil {
+		log.Printf("Error reading upload: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	// Borne les images trop grandes avant stockage (JPEG/PNG uniquement)
+	data = boundImageBytes(data)
+
 	if err := os.MkdirAll("/uploads", 0755); err != nil {
 		log.Printf("Error creating uploads dir: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
-	dst, err := os.Create(filepath.Join("/uploads", filename))
-	if err != nil {
-		log.Printf("Error creating file: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
+	if err := os.WriteFile(filepath.Join("/uploads", filename), data, 0644); err != nil {
 		log.Printf("Error writing file: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
@@ -422,6 +522,8 @@ func imageImportHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not an image", http.StatusBadRequest)
 		return
 	}
+	// Borne les images trop grandes avant stockage (JPEG/PNG uniquement)
+	data = boundImageBytes(data)
 
 	if err := os.MkdirAll("/uploads", 0755); err != nil {
 		log.Printf("Error creating uploads dir: %v", err)
@@ -1060,6 +1162,13 @@ func fetchPortfolioData() (*PortfolioData, error) {
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching person: %v", err)
+	}
+
+	// En prod (admin désactivé), email et téléphone ne sont jamais exposés
+	// par l'API (anti-scraping). En dev, le CV complet est généré.
+	if !adminEnabled {
+		p.Person.Email = ""
+		p.Person.Phone = ""
 	}
 
 	domainRows, err := db.Query("SELECT id, name FROM domain ORDER BY id ASC")

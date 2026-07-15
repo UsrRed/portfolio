@@ -56,6 +56,7 @@ const emit = defineEmits<{
   position: fixed;
   inset: 0;
   background: rgba(3, 8, 5, 0.8);
+  -webkit-backdrop-filter: blur(4px); /* Safari */
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;

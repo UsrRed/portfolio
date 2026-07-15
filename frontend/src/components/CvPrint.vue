@@ -5,6 +5,15 @@ import { computed, onMounted, onUnmounted } from 'vue'
 // (masqué à l'écran par la règle globale @media screen de style.css).
 const props = defineProps<{ data: any }>()
 
+// Seul Chromium honore `@page { size: A4; margin: 0 }`. Safari et Firefox
+// imposent leurs marges d'impression : les 210×296mm du CV ne tiennent plus
+// dans la zone imprimable et débordent sur une 2e page. Pour ces moteurs,
+// on réduit l'ensemble du CV (zoom) à l'impression — cadre blanc autour,
+// mais une seule page partout. iOS Chrome (CriOS) imprime via WebKit :
+// il n'est volontairement pas reconnu comme Chromium ici.
+const isChromium = typeof navigator !== 'undefined' && /chrome|chromium|edg\//i.test(navigator.userAgent)
+const fitPage = !isChromium
+
 // Le nom du PDF proposé par le navigateur reprend document.title :
 // on le remplace pendant l'impression puis on restaure le titre du site.
 const PDF_TITLE = 'Yohann Denoyelle CV'
@@ -67,7 +76,7 @@ const phoneHref = computed(() => 'tel:' + (props.data.person.phone ?? '').replac
 </script>
 
 <template>
-  <div class="cv-print">
+  <div class="cv-print" :class="{ 'cv-fit-page': fitPage }">
     <!-- Colonne principale : première dans le DOM pour que le flux texte
          du PDF commence par nom → titre → expériences (ordre attendu par
          les parseurs ATS). La position visuelle est gérée par la grille. -->
@@ -199,6 +208,15 @@ const phoneHref = computed(() => 'tel:' + (props.data.person.phone ?? '').replac
   /* Les ligatures (fi, ffi…) sont encodées en glyphes spéciaux dans le PDF
      et cassent l'extraction de texte de certains parseurs ATS. */
   font-variant-ligatures: none;
+}
+
+/* Safari / Firefox : marges d'impression imposées par le navigateur.
+   Réduction globale pour tenir la zone imprimable d'une page A4 ou Letter,
+   quelles que soient les marges (~13mm max par côté). */
+@media print {
+  .cv-print.cv-fit-page {
+    zoom: 0.88;
+  }
 }
 
 /* ── Colonne latérale ──

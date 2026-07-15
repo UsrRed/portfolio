@@ -2,6 +2,7 @@
 import { ref, reactive } from 'vue'
 import { useAdmin } from '../composables/useAdmin'
 import EditModal from './EditModal.vue'
+import DetailModal from './DetailModal.vue'
 import ImageUploadField from './ImageUploadField.vue'
 import { ApiService } from '../services/api.service'
 
@@ -22,7 +23,7 @@ interface Domain {
 const props = defineProps<{ domains: Domain[] }>()
 
 const { adminMode } = useAdmin()
-const flipped = ref<number | null>(null)
+const selected = ref<Skill | null>(null)
 const saving = ref(false)
 
 const localDomains = ref<Domain[]>(props.domains.map(d => ({ ...d, skills: [...(d.skills ?? [])] })))
@@ -117,9 +118,9 @@ async function deleteItem() {
   }
 }
 
-function toggle(id: number) {
+function openDetails(skill: Skill) {
   if (!adminMode.value) {
-    flipped.value = flipped.value === id ? null : id
+    selected.value = skill
   }
 }
 
@@ -178,45 +179,56 @@ function deleteLabel(): string | undefined {
               v-for="skill in domain.skills"
               :key="skill.id"
               class="skill-card stagger-item"
-              :class="{ flipped: !adminMode && flipped === skill.id }"
               role="button"
               tabindex="0"
-              :aria-expanded="flipped === skill.id"
-              @click="toggle(skill.id)"
-              @keydown.enter.prevent="toggle(skill.id)"
-              @keydown.space.prevent="toggle(skill.id)"
-              :title="adminMode ? '' : (flipped === skill.id ? 'Cliquer pour fermer' : 'Cliquer pour voir les détails')"
+              aria-haspopup="dialog"
+              @click="openDetails(skill)"
+              @keydown.enter.prevent="openDetails(skill)"
+              @keydown.space.prevent="openDetails(skill)"
+              :title="adminMode ? '' : 'Cliquer pour voir les détails'"
             >
-              <div class="skill-inner">
-                <div class="skill-front">
-                  <img
-                    :src="skill.image_url"
-                    :alt="'Logo ' + skill.name"
-                    class="skill-img"
-                    width="52"
-                    height="52"
-                    loading="lazy"
-                    decoding="async"
-                    @error="($event.target as HTMLImageElement).style.display='none'"
-                  />
-                  <p class="skill-name">{{ skill.name }}</p>
-                  <button v-if="adminMode" class="skill-edit-btn" @click.stop="openEditSkill(skill)" title="Modifier">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                </div>
-                <div class="skill-back">
-                  <p class="skill-details">{{ skill.details || 'Aucun détail disponible.' }}</p>
-                </div>
-              </div>
+              <img
+                :src="skill.image_url"
+                :alt="'Logo ' + skill.name"
+                class="skill-img"
+                width="52"
+                height="52"
+                loading="lazy"
+                decoding="async"
+                @error="($event.target as HTMLImageElement).style.display='none'"
+              />
+              <p class="skill-name">{{ skill.name }}</p>
+              <button v-if="adminMode" class="skill-edit-btn" @click.stop="openEditSkill(skill)" title="Modifier">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
   </section>
+
+  <!-- Popup de détails d'une compétence -->
+  <DetailModal v-if="selected" :title="selected.name" @close="selected = null">
+    <div class="skill-detail">
+      <div class="skill-detail-header">
+        <img
+          v-if="selected.image_url"
+          :src="selected.image_url"
+          :alt="'Logo ' + selected.name"
+          class="skill-detail-img"
+          width="64"
+          height="64"
+          @error="($event.target as HTMLImageElement).style.display='none'"
+        />
+        <h3 class="skill-detail-name">{{ selected.name }}</h3>
+      </div>
+      <p class="skill-detail-text">{{ selected.details || 'Aucun détail disponible.' }}</p>
+    </div>
+  </DetailModal>
 
   <EditModal
     v-if="modal"
@@ -252,7 +264,7 @@ function deleteLabel(): string | undefined {
           <label class="field-label">Détails</label>
           <textarea class="field-input field-textarea" v-model="form.details" rows="3" placeholder="Description de la compétence…"></textarea>
         </div>
-        <ImageUploadField v-model="form.image_url" label="Image" :search-query="form.name" />
+        <ImageUploadField v-model="form.image_url" label="Image" :search-query="form.name" :aspect="1" />
       </template>
     </div>
   </EditModal>
@@ -359,52 +371,25 @@ function deleteLabel(): string | undefined {
 }
 
 .skill-card {
-  perspective: 1000px;
+  position: relative;
   cursor: pointer;
   height: 150px;
-  position: relative;
-}
-
-.skill-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
-}
-
-.skill-card.flipped .skill-inner {
-  transform: rotateY(180deg);
-}
-
-.skill-front,
-.skill-back {
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
+  padding: 0.75rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  transition: border-color 0.3s;
-  padding: 0.75rem;
+  border-radius: var(--radius);
+  transition: var(--transition);
 }
 
-.skill-card:hover .skill-front,
-.skill-card:hover .skill-back {
+.skill-card:hover {
   border-color: var(--border-glow);
-}
-
-.skill-back {
-  transform: rotateY(180deg);
-  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), rgba(var(--accent-rgb), 0.06));
-  border-color: rgba(var(--primary-rgb), 0.3);
-  padding: 1rem;
+  box-shadow: var(--glow);
+  transform: translateY(-3px);
 }
 
 .skill-img {
@@ -427,16 +412,41 @@ function deleteLabel(): string | undefined {
   line-height: 1.3;
 }
 
-.skill-details {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  text-align: center;
-  line-height: 1.5;
+/* ── Popup de détails ── */
+.skill-detail {
+  padding: 2rem 1.75rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.skill-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-right: 2.5rem; /* évite le bouton de fermeture */
+}
+
+.skill-detail-img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.skill-detail-name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
   margin: 0;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 6;
-  -webkit-box-orient: vertical;
+}
+
+.skill-detail-text {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.75;
+  margin: 0;
+  white-space: pre-line;
 }
 
 .skill-edit-btn {

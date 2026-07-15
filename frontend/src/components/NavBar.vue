@@ -117,6 +117,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 
 .navbar--scrolled {
   background: rgba(6, 10, 8, 0.88);
+  -webkit-backdrop-filter: blur(20px); /* Safari */
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
   padding: 0.7rem 0;
@@ -327,6 +328,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
     flex-direction: column;
     align-items: stretch;
     background: rgba(10, 17, 13, 0.97);
+    -webkit-backdrop-filter: blur(20px); /* Safari */
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     padding: 1rem 1.5rem;

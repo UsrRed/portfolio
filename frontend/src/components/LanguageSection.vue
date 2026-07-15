@@ -19,6 +19,24 @@ const { adminMode } = useAdmin()
 const saving = ref(false)
 const localItems = ref<Language[]>([...props.languages])
 
+// Upload du document de certification (PDF ou image)
+const uploadingCert = ref(false)
+const certInput = ref<HTMLInputElement>()
+
+async function onCertFile(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  uploadingCert.value = true
+  try {
+    form.certification_url = await ApiService.uploadImage(file)
+  } catch {
+    alert("Erreur lors de l'upload du document")
+  } finally {
+    uploadingCert.value = false
+    if (certInput.value) certInput.value.value = ''
+  }
+}
+
 type ModalMode = { type: 'add' } | { type: 'edit'; item: Language } | null
 const modal = ref<ModalMode>(null)
 const form = reactive<any>({})
@@ -150,10 +168,24 @@ function getPercent(level: string): number {
         <input class="field-input" v-model="form.level" placeholder="ex: B1, Langue natale, Des notions…" />
       </div>
       <div class="form-field">
-        <label class="field-label">URL Certification</label>
-        <input class="field-input" v-model="form.certification_url" placeholder="https://…" />
+        <label class="field-label">Certification (PDF ou lien)</label>
+        <div class="cert-row">
+          <input class="field-input cert-input" v-model="form.certification_url" placeholder="https://… ou upload d'un PDF" />
+          <label class="cert-upload-btn" :class="{ loading: uploadingCert }">
+            <input ref="certInput" type="file" accept="application/pdf,image/*" @change="onCertFile" style="display:none" />
+            <svg v-if="!uploadingCert" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <svg v-else class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            {{ uploadingCert ? '…' : 'Upload' }}
+          </label>
+        </div>
+        <p class="cert-hint">Uploadez le document téléchargé (ex. certification Cambridge) : le lien sera rempli automatiquement.</p>
       </div>
-      <ImageUploadField v-model="form.image_url" label="Drapeau / Image" />
+      <ImageUploadField v-model="form.image_url" label="Drapeau / Image" :aspect="11 / 8" />
     </div>
   </EditModal>
 </template>
@@ -314,4 +346,48 @@ function getPercent(level: string): number {
 }
 
 .field-input:focus { outline: none; border-color: var(--primary); }
+
+.cert-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cert-input { flex: 1; }
+
+.cert-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.875rem;
+  background: var(--primary-dim);
+  border: 1px solid rgba(var(--primary-rgb), 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+
+.cert-upload-btn:hover:not(.loading) {
+  background: rgba(var(--primary-rgb), 0.2);
+}
+
+.cert-upload-btn.loading {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.cert-hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin: 0.35rem 0 0;
+}
+
+.spin { animation: spin 1s linear infinite; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 </style>

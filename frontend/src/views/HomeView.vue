@@ -74,7 +74,10 @@ const { data, error, loading } = useDataController()
 
       <div class="separator"></div>
 
-      <ProjectSection :projects="data.projects" />
+      <ProjectSection
+        :projects="data.projects"
+        @update:projects="data.projects = $event"
+      />
     </main>
 
     <!-- Footer -->

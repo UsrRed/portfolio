@@ -195,9 +195,15 @@ echo -e "${GREEN}[2/5] Préparation de la base de données...${NC}"
 docker compose $COMPOSE_FILES build db || error_exit "Build DB"
 docker compose $COMPOSE_FILES up -d db || error_exit "Lancement DB"
 
-# Attente que la DB soit prête
+# Attente que la DB soit prête.
+# Test en TCP (-h 127.0.0.1) et non via la socket : au premier boot d'un
+# volume neuf, l'entrypoint lance un serveur TEMPORAIRE (socket uniquement)
+# le temps d'exécuter init.sql, puis l'arrête. Un test socket répond "prêt"
+# pendant cette phase et la restauration tombe ensuite sur
+# "FATAL: the database system is shutting down". Le serveur définitif est
+# le seul à écouter en TCP.
 echo -n "   Attente de la DB"
-until docker compose $COMPOSE_FILES exec -T db pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" &>/dev/null; do
+until docker compose $COMPOSE_FILES exec -T db pg_isready -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" &>/dev/null; do
     echo -n "."
     sleep 1
 done

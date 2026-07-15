@@ -113,7 +113,7 @@ async function deleteItem() {
         <label class="field-label">Nom</label>
         <input class="field-input" v-model="form.name" placeholder="ex: Jeux vidéos" />
       </div>
-      <ImageUploadField v-model="form.image_url" label="Image" />
+      <ImageUploadField v-model="form.image_url" label="Image" :aspect="1" />
     </div>
   </EditModal>
 </template>

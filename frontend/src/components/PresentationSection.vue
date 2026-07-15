@@ -259,7 +259,7 @@ async function save() {
         <label class="field-label">LinkedIn URL</label>
         <input class="field-input" v-model="form.linkedin_url" />
       </div>
-      <ImageUploadField v-model="form.image_url" label="Photo de profil" />
+      <ImageUploadField v-model="form.image_url" label="Photo de profil" :aspect="4 / 5" />
     </div>
   </EditModal>
 </template>

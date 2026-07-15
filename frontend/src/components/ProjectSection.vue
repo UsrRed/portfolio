@@ -2,6 +2,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useAdmin } from '../composables/useAdmin'
 import EditModal from './EditModal.vue'
+import DetailModal from './DetailModal.vue'
 import ImageUploadField from './ImageUploadField.vue'
 import { ApiService } from '../services/api.service'
 
@@ -21,6 +22,10 @@ interface Project {
 
 const props = defineProps<{ projects: Project[] }>()
 
+// Remonte chaque mutation à HomeView : CvPrint lit data.projects, sans quoi
+// un projet masqué/modifié en admin resterait dans le CV imprimé avant rechargement.
+const emit = defineEmits<{ (e: 'update:projects', projects: Project[]): void }>()
+
 const { adminMode } = useAdmin()
 const saving = ref(false)
 const localProjects = ref<Project[]>([...props.projects])
@@ -30,6 +35,9 @@ const localProjects = ref<Project[]>([...props.projects])
 const visibleProjects = computed(() =>
   adminMode.value ? localProjects.value : localProjects.value.filter(p => !p.hidden)
 )
+
+// Popup de lecture d'un projet
+const selected = ref<Project | null>(null)
 
 const toast = ref<{ msg: string; type: 'success' | 'error' } | null>(null)
 
@@ -67,6 +75,7 @@ async function save() {
       if (idx !== -1) localProjects.value[idx] = { ...updated, id }
       showToast('Projet mis à jour !', 'success')
     }
+    emit('update:projects', [...localProjects.value])
     modal.value = null
   } catch {
     showToast('Erreur lors de la sauvegarde', 'error')
@@ -82,6 +91,7 @@ async function deleteItem() {
     const id = modal.value.item.id
     await ApiService.deleteProject(id)
     localProjects.value = localProjects.value.filter(p => p.id !== id)
+    emit('update:projects', [...localProjects.value])
     modal.value = null
     showToast('Projet supprimé', 'success')
   } catch {
@@ -107,9 +117,21 @@ async function deleteItem() {
       </div>
 
       <div class="projects-grid">
-        <article v-for="project in visibleProjects" :key="project.id" class="project-card stagger-item" :class="{ 'project-hidden': project.hidden }">
+        <article
+          v-for="project in visibleProjects"
+          :key="project.id"
+          class="project-card stagger-item"
+          :class="{ 'project-hidden': project.hidden }"
+          role="button"
+          tabindex="0"
+          aria-haspopup="dialog"
+          title="Cliquer pour lire le projet en entier"
+          @click="selected = project"
+          @keydown.enter.prevent="selected = project"
+          @keydown.space.prevent="selected = project"
+        >
           <span v-if="adminMode && project.hidden" class="project-hidden-badge">Masqué</span>
-          <button v-if="adminMode" class="project-edit-btn" @click="openEdit(project)" title="Modifier">
+          <button v-if="adminMode" class="project-edit-btn" @click.stop="openEdit(project)" title="Modifier">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -120,13 +142,12 @@ async function deleteItem() {
             <img :src="project.image_url" :alt="'Aperçu du projet ' + project.title" class="project-img" width="640" height="360" loading="lazy" decoding="async" />
             <div class="project-overlay">
               <p v-if="project.description" class="project-desc">{{ project.description }}</p>
-              <a v-if="project.link_url" :href="project.link_url" class="btn btn-primary project-link" target="_blank" rel="noopener noreferrer">
-                En savoir plus
+              <span class="btn btn-primary project-link">
+                Lire la suite
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                  <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                 </svg>
-              </a>
+              </span>
             </div>
           </div>
           <div v-else class="project-no-img">
@@ -147,6 +168,38 @@ async function deleteItem() {
         </article>
       </div>
     </div>
+
+    <!-- Popup de lecture complète d'un projet -->
+    <DetailModal v-if="selected" :title="selected.title" @close="selected = null">
+      <div class="proj-detail">
+        <img
+          v-if="selected.image_url"
+          :src="selected.image_url"
+          :alt="'Aperçu du projet ' + selected.title"
+          class="proj-detail-img"
+        />
+        <div class="proj-detail-body">
+          <h3 class="proj-detail-title">{{ selected.title }}</h3>
+          <span v-if="selected.period" class="tag">{{ selected.period }}</span>
+          <p v-if="selected.description" class="proj-detail-text">{{ selected.description }}</p>
+          <div v-if="selected.skills_tech" class="proj-detail-block">
+            <h4 class="proj-detail-subtitle">Compétences techniques</h4>
+            <p class="proj-detail-text muted">{{ selected.skills_tech }}</p>
+          </div>
+          <div v-if="selected.skills_human" class="proj-detail-block">
+            <h4 class="proj-detail-subtitle">Compétences humaines</h4>
+            <p class="proj-detail-text muted">{{ selected.skills_human }}</p>
+          </div>
+          <a v-if="selected.link_url" :href="selected.link_url" class="btn btn-primary proj-detail-link" target="_blank" rel="noopener noreferrer">
+            En savoir plus
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </DetailModal>
 
     <EditModal
       v-if="modal"
@@ -182,7 +235,7 @@ async function deleteItem() {
           <label class="field-label">Lien</label>
           <input class="field-input" v-model="form.link_url" placeholder="https://…" />
         </div>
-        <ImageUploadField v-model="form.image_url" label="Image du projet" />
+        <ImageUploadField v-model="form.image_url" label="Image du projet" :aspect="16 / 9" />
         <label class="field-checkbox">
           <input type="checkbox" v-model="form.hidden" />
           Masquer ce projet (il n'apparaîtra pas sur le site en production)
@@ -248,6 +301,7 @@ async function deleteItem() {
   display: flex;
   flex-direction: column;
   position: relative;
+  cursor: pointer;
 }
 
 .project-card:hover {
@@ -419,6 +473,69 @@ async function deleteItem() {
   font-size: 0.85rem;
   color: var(--text-muted);
   cursor: pointer;
+}
+
+/* ── Popup de lecture ── */
+.proj-detail {
+  display: flex;
+  flex-direction: column;
+}
+
+.proj-detail-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-bottom: 1px solid var(--border);
+}
+
+.proj-detail-body {
+  padding: 1.5rem 1.75rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.proj-detail-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  padding-right: 2rem;
+}
+
+.proj-detail-text {
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.75;
+  margin: 0;
+  white-space: pre-line;
+}
+
+.proj-detail-text.muted {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.proj-detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.proj-detail-subtitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  margin: 0;
+}
+
+.proj-detail-link {
+  margin-top: 0.25rem;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.85rem;
 }
 
 .project-hidden { opacity: 0.45; }

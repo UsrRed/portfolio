@@ -56,7 +56,8 @@ services:
           memory: 512M
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./db/structure:/docker-entrypoint-initdb.d
+      # Voir docker-compose.yml : seul init.sql à l'init, migrations via ./migrate.sh
+      - ./db/structure/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
 volumes:
   traefik_certs:
