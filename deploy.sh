@@ -140,10 +140,11 @@ echo -e "${GREEN}[1/5] Nettoyage des anciens conteneurs...${NC}"
 EXTRA_DOWN_FLAGS="--remove-orphans"
 RESTORE_ARCHIVE=""
 BACKUP_DIR="./backups"
+WIPE_DATA=false
 
 echo -ne "   ${YELLOW}Supprimer complètement la BDD (réinitialisée depuis init.sql) ?${NC} [y/N] " >&2; read -r rep </dev/tty
 if [[ "$rep" =~ ^[Yy]$ ]]; then
-    EXTRA_DOWN_FLAGS="$EXTRA_DOWN_FLAGS --volumes"
+    WIPE_DATA=true
 
     # Liste des backups, la plus récente en premier
     mapfile -t BACKUPS < <(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null)
@@ -177,6 +178,17 @@ else
 fi
 
 docker compose $COMPOSE_FILES down $EXTRA_DOWN_FLAGS || error_exit "Nettoyage"
+
+# Reset des données : suppression CIBLÉE des volumes (db_data, uploads).
+# Surtout pas `down --volumes` : il supprimerait aussi traefik_certs
+# (acme.json), et Traefik redemanderait un certificat à chaque déploiement
+# → rate-limit Let's Encrypt (5 certificats identiques / 7 jours) → Traefik
+# sert son certificat auto-signé → ERR_CERT_AUTHORITY_INVALID.
+if [ "$WIPE_DATA" = true ]; then
+    PROJECT_NAME=$(docker compose $COMPOSE_FILES config 2>/dev/null | awk '/^name:/{print $2; exit}')
+    PROJECT_NAME=${PROJECT_NAME:-$(basename "$PWD")}
+    docker volume rm -f "${PROJECT_NAME}_db_data" "${PROJECT_NAME}_uploads" > /dev/null 2>&1 || true
+fi
 
 # 1.5 Vérification des ports
 echo -e "${GREEN}[1.5/5] Vérification des ports...${NC}"
