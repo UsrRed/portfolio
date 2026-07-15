@@ -65,9 +65,15 @@ tar xzf "$ARCHIVE" -C "$TMP_DIR"
 
 # 1. DB restore
 echo -e "${GREEN}[1/2] Restauration de la base de données...${NC}"
+# Anciennes backups : neutralise les ALTER ... OWNER TO / GRANT référençant un
+# rôle qui n'existe plus (ex: "superUser") — les nouvelles backups sont dumpées
+# avec --no-owner --no-privileges.
+sed -E -i -e '/^ALTER .* OWNER TO .*;$/d' -e '/^(GRANT|REVOKE) /d' "$TMP_DIR/db.sql"
+
 if ! docker compose $COMPOSE_FILES exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-        < "$TMP_DIR/db.sql" > /dev/null 2>&1; then
-    echo -e "${RED}✘ Échec de la restauration BDD. Les services sont-ils démarrés ?${NC}"
+        -v ON_ERROR_STOP=1 --single-transaction \
+        < "$TMP_DIR/db.sql" > /dev/null; then
+    echo -e "${RED}✘ Échec de la restauration BDD (voir l'erreur ci-dessus).${NC}"
     exit 1
 fi
 echo "    → Base de données restaurée"

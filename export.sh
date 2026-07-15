@@ -38,8 +38,11 @@ trap "rm -rf '$TMP_DIR'" EXIT
 
 # 1. DB dump
 echo -e "${GREEN}[1/2] Dump de la base de données...${NC}"
+# --no-owner/--no-privileges : dump portable, restaurable même si
+# POSTGRES_USER change entre l'export et la restauration
 if ! docker compose $COMPOSE_FILES exec -T db \
-        pg_dump --clean --if-exists -U "$POSTGRES_USER" "$POSTGRES_DB" > "$TMP_DIR/db.sql"; then
+        pg_dump --clean --if-exists --no-owner --no-privileges \
+        -U "$POSTGRES_USER" "$POSTGRES_DB" > "$TMP_DIR/db.sql"; then
     echo -e "${RED}✘ Impossible de joindre le container db. Les services sont-ils démarrés ?${NC}"
     exit 1
 fi

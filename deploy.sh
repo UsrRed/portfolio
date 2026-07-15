@@ -221,8 +221,21 @@ if [ -n "$RESTORE_ARCHIVE" ]; then
     tar xzf "$RESTORE_ARCHIVE" -C "$RESTORE_TMP" || error_exit "Extraction de la backup"
     [ -f "$RESTORE_TMP/db.sql" ] || error_exit "db.sql absent de la backup"
 
+    # Anciennes backups : le dump peut référencer le POSTGRES_USER de l'époque
+    # (ex: "superUser") via ALTER ... OWNER TO / GRANT, rôle absent de la BDD
+    # neuve → "ERROR: role ... does not exist". On neutralise ces lignes :
+    # les objets appartiendront à l'utilisateur courant, ce qui est voulu.
+    # (Les nouvelles backups sont dumpées avec --no-owner --no-privileges.)
+    sed -E -i \
+        -e '/^ALTER .* OWNER TO .*;$/d' \
+        -e '/^(GRANT|REVOKE) /d' \
+        "$RESTORE_TMP/db.sql"
+
+    # ON_ERROR_STOP + --single-transaction : toute vraie erreur SQL stoppe le
+    # déploiement et annule la restauration (avant, psql continuait en silence).
     docker compose $COMPOSE_FILES exec -T db psql \
         -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
+        -v ON_ERROR_STOP=1 --single-transaction \
         < "$RESTORE_TMP/db.sql" > /dev/null || error_exit "Restauration BDD"
     echo -e "${GREEN}   ✔ Base de données restaurée.${NC}"
 fi
