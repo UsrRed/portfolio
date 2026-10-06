@@ -1,19 +1,11 @@
 services:
-  proxy:
-    image: traefik:v3
-    container_name: portfolio_proxy
-    restart: unless-stopped
-    environment:
-      - DOCKER_API_VERSION=1.44
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./web/traefik.yml:/etc/traefik/traefik.yml:ro
-      - traefik_certs:/letsencrypt
-    networks:
-      - frontend
+  # Plus de service `proxy` ici depuis le 2026-10-06 : le Traefik est
+  # partagé entre tous les sites du serveur (projet compose `edge`, dans
+  # /srv/edge, maintenu depuis le dépôt infra de Red). Il vivait ici, et
+  # `deploy.sh` commence par `docker compose down` : chaque déploiement du
+  # portfolio aurait coupé les autres sites.
+  # Le frontend rejoint le réseau `site-portfolio` (externe, créé par
+  # deploy.sh s'il manque), que seul ce Traefik partage avec lui.
 
   frontend:
     restart: unless-stopped
@@ -22,9 +14,13 @@ services:
     build:
       args:
         VITE_ENABLE_ADD_PROJECT: "false"
+    networks:
+      - frontend
+      - backend
+      - site
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=portfolio_frontend"
+      - "traefik.docker.network=site-portfolio"
       # Redirection HTTP → HTTPS
       - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
       - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
@@ -59,5 +55,7 @@ services:
       # Voir docker-compose.yml : seul init.sql à l'init, migrations via ./migrate.sh
       - ./db/structure/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
-volumes:
-  traefik_certs:
+networks:
+  site:
+    name: site-portfolio
+    external: true

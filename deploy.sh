@@ -180,10 +180,9 @@ fi
 docker compose $COMPOSE_FILES down $EXTRA_DOWN_FLAGS || error_exit "Nettoyage"
 
 # Reset des données : suppression CIBLÉE des volumes (db_data, uploads).
-# Surtout pas `down --volumes` : il supprimerait aussi traefik_certs
-# (acme.json), et Traefik redemanderait un certificat à chaque déploiement
-# → rate-limit Let's Encrypt (5 certificats identiques / 7 jours) → Traefik
-# sert son certificat auto-signé → ERR_CERT_AUTHORITY_INVALID.
+# Surtout pas `down --volumes` : seuls ces deux volumes sont des données
+# du portfolio (les certificats sont maintenant dans le Traefik partagé,
+# projet `edge`, mais un volume de plus ici ne doit pas partir par mégarde).
 if [ "$WIPE_DATA" = true ]; then
     PROJECT_NAME=$(docker compose $COMPOSE_FILES config 2>/dev/null | awk '/^name:/{print $2; exit}')
     PROJECT_NAME=${PROJECT_NAME:-$(basename "$PWD")}
@@ -201,6 +200,12 @@ done < <(
         /published:/            { port = $2; gsub(/[^0-9]/, "", port); if (port != "") print svc, port }
     '
 )
+
+# Réseau partagé avec le Traefik du serveur (voir docker-compose.prod.yml) :
+# externe, donc à créer s'il manque — `up` refuserait de démarrer frontend.
+if [ "$IS_PROD" = true ] && ! docker network inspect site-portfolio &>/dev/null; then
+    docker network create site-portfolio > /dev/null || error_exit "Création du réseau site-portfolio"
+fi
 
 # 2. Build et lancement de la DB
 echo -e "${GREEN}[2/5] Préparation de la base de données...${NC}"
@@ -291,24 +296,26 @@ docker compose $COMPOSE_FILES build frontend || error_exit "Build Frontend"
 docker compose $COMPOSE_FILES up -d frontend || error_exit "Lancement Frontend"
 
 if [ "$IS_PROD" = true ]; then
-    echo -e "${GREEN}[+] Lancement du Proxy Traefik...${NC}"
-    docker compose $COMPOSE_FILES up -d proxy || error_exit "Lancement Proxy"
-
-    # Laisse à Traefik le temps de tenter l'émission ACME, puis détecte un
-    # éventuel rate-limit Let's Encrypt (max 5 certificats identiques / 7 jours).
-    # Dans ce cas Traefik sert son certificat auto-signé en attendant
-    # (ERR_CERT_AUTHORITY_INVALID côté navigateur).
-    sleep 10
-    RATE_LIMIT_AT=$(docker logs portfolio_proxy 2>&1 \
-        | grep -oP 'rateLimited.*?retry after \K[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}' \
-        | tail -1 || true)
-    if [ -n "$RATE_LIMIT_AT" ]; then
-        echo -e "${YELLOW}   ⚠ Rate-limit Let's Encrypt : émission refusée jusqu'au ${RATE_LIMIT_AT} UTC.${NC}"
-        echo -e "${YELLOW}     En attendant, le site sert le certificat auto-signé Traefik.${NC}"
-        echo -e "${YELLOW}     Pour retenter automatiquement à l'heure dite :${NC}"
-        echo -e "${YELLOW}       nohup ./retry-cert.sh >> retry-cert.log 2>&1 &${NC}"
+    # Le Traefik n'est plus ici : c'est le frontal partagé du serveur
+    # (projet compose `edge`, conteneur edge-traefik, /srv/edge), commun à
+    # tous les sites et déployé à part. Ce déploiement ne fait que vérifier
+    # qu'il tourne : sans lui, le site est injoignable.
+    if ! docker ps --format '{{.Names}}' | grep -qx edge-traefik; then
+        echo -e "${YELLOW}   ⚠ Le Traefik partagé (edge-traefik) ne tourne pas : site injoignable.${NC}"
+        echo -e "${YELLOW}     Le relancer : cd /srv/edge && docker compose up -d${NC}"
     else
-        echo -e "${BLUE}   → Certificat SSL (Let's Encrypt) émis et renouvelé automatiquement par Traefik.${NC}"
+        # Rate-limit Let's Encrypt (max 5 certificats identiques / 7 jours) :
+        # Traefik sert alors son certificat auto-signé
+        # (ERR_CERT_AUTHORITY_INVALID côté navigateur).
+        RATE_LIMIT_AT=$(docker logs --since 24h edge-traefik 2>&1 \
+            | grep -F "${DOMAIN}" \
+            | grep -oP 'rateLimited.*?retry after \K[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}' \
+            | tail -1 || true)
+        if [ -n "$RATE_LIMIT_AT" ]; then
+            echo -e "${YELLOW}   ⚠ Rate-limit Let's Encrypt : émission refusée jusqu'au ${RATE_LIMIT_AT} UTC.${NC}"
+        else
+            echo -e "${BLUE}   → Servi par le Traefik partagé (edge-traefik), certificat Let's Encrypt automatique.${NC}"
+        fi
     fi
 fi
 
