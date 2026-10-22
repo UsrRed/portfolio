@@ -9,10 +9,28 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # Le SSH du serveur est invisible (infra : distant/portfolio-prod/bin/garde-ssh) :
+      # port tiré au hasard, fermé à tous, ouvert 30 s à l'adresse de ce runner
+      # par un paquet fwknop chiffré et signé.
+      - name: Open SSH (fwknop)
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          FWKNOP_PORT: ${{ secrets.FWKNOP_PORT }}
+          FWKNOP_KEY: ${{ secrets.FWKNOP_KEY }}
+          FWKNOP_HMAC: ${{ secrets.FWKNOP_HMAC }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fwknop-client >/dev/null
+          fwknop -A "tcp/$SSH_PORT" -s -D "$SERVER_IP" -p "$FWKNOP_PORT" \
+            --use-hmac --key-base64-rijndael "$FWKNOP_KEY" --key-base64-hmac "$FWKNOP_HMAC"
+          sleep 2
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
+          port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
