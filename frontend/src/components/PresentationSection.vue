@@ -9,12 +9,12 @@ interface Person {
   image_url: string
   first_name: string
   last_name: string
-  birth_date?: string
   driver_license?: string
   location?: string
   title?: string
   description: string
   linkedin_url?: string
+  github_url?: string
   email?: string
   phone?: string
 }
@@ -135,15 +135,6 @@ async function save() {
             </svg>
             {{ person.driver_license }}
           </span>
-          <span v-if="person.birth_date" class="fact">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            Né le {{ person.birth_date }}
-          </span>
         </div>
 
         <div class="hero-actions">
@@ -153,6 +144,12 @@ async function save() {
               <circle cx="4" cy="4" r="2"/>
             </svg>
             Me contacter
+          </a>
+          <a v-if="person.github_url" :href="person.github_url" class="btn btn-outline" target="_blank" rel="noopener noreferrer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/>
+            </svg>
+            GitHub
           </a>
           <button class="btn btn-outline" @click="printCv" title="Enregistrer le CV en PDF (Ctrl+P)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -258,6 +255,10 @@ async function save() {
       <div class="form-field">
         <label class="field-label">LinkedIn URL</label>
         <input class="field-input" v-model="form.linkedin_url" />
+      </div>
+      <div class="form-field">
+        <label class="field-label">GitHub URL</label>
+        <input class="field-input" v-model="form.github_url" placeholder="https://github.com/UsrRed" />
       </div>
       <ImageUploadField v-model="form.image_url" label="Photo de profil" :aspect="4 / 5" />
     </div>

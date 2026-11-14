@@ -21,19 +21,20 @@ CREATE TABLE schema_migrations (
 );
 INSERT INTO schema_migrations (filename) VALUES
     ('migration_2026-07-14_outils_vers_competences.sql'),
-    ('migration_2026-07-14_person_email_phone.sql');
+    ('migration_2026-07-14_person_email_phone.sql'),
+    ('migration_2026-11-14_sans_naissance_github_ekipeo.sql');
 
 -- Create Person table
 CREATE TABLE person (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    birth_date DATE,
     driver_license VARCHAR(100),
     location VARCHAR(100),
     title VARCHAR(255),
     description TEXT,
     linkedin_url VARCHAR(255),
+    github_url VARCHAR(255),
     image_url VARCHAR(255),
     -- Contact affiché sur le CV (indispensable pour les parseurs ATS) :
     -- valeurs à renseigner via l'interface admin du site.
@@ -125,11 +126,11 @@ CREATE TABLE project (
 -- DATA INSERTION
 
 -- Person
-INSERT INTO person (first_name, last_name, birth_date, driver_license, location, title, description, linkedin_url, image_url) VALUES 
-('Yohann', 'DENOYELLE', '2003-07-01', 'Permis B et véhicule', 'Blois', 
+INSERT INTO person (first_name, last_name, driver_license, location, title, description, linkedin_url, github_url, image_url) VALUES 
+('Yohann', 'DENOYELLE', 'Permis B et véhicule', 'Blois', 
  'Étudiant à l''IUT de Blois', 
  'Étudiant à l''IUT de Blois pour un BUT Réseaux et Télécommunications orienté cybersécurité. Stagiaire chez Senior Aerospace Ermeto. En recherche d''un apprentissage pour 2024/2027 avec l''école d''ingénieur EPITA.',
- 'https://fr.linkedin.com/in/yohann-denoyelle', '/images/Yohann.jpeg');
+ 'https://fr.linkedin.com/in/yohann-denoyelle', 'https://github.com/UsrRed', '/images/Yohann.jpeg');
 
 -- Domains
 INSERT INTO domain (name) VALUES
@@ -196,7 +197,7 @@ INSERT INTO education (person_id, school, school_url, degree, details, start_dat
 -- Experience
 INSERT INTO experience (person_id, company, company_url, role, details, start_date, duration, status) VALUES 
 (1, 'Orange', 'https://www.orange.fr', 'Apprenti chargé d''affaires', 'Professionnalisation. Déploiement de supports réseaux. Spécialisé dans le réseau FTTO. Relation aux clients.', '2022-2023', '1 an', 'Terminé'),
-(1, 'E-kipeo', 'https://www.e-kipeo.com/', 'Apprenti technicien réseau', 'Support téléphonique. Gestion et supervision de réseaux. Relation aux clients.', '2023', '2 mois - Fermeture de site', 'Terminé'),
+(1, 'E-kipeo', 'https://www.e-kipeo.com/', 'Apprenti technicien réseau', 'Relation client et support téléphonique. Gestion et supervision de réseaux.', '2023', '2 mois - Fermeture de site', 'Terminé'),
 (1, 'Ermeto', 'https://senior-ermeto.fr/', 'Stagiaire technicien informatique', 'Gestion de projets. Mise en place de badges multifonctions. Création d''un site web catalogue. Mise en conformité et rédaction de la procédure de gestion de l''Active Directory.', '2024', '3 mois', 'En cours');
 
 -- Projects

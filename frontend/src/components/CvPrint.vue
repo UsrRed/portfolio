@@ -70,6 +70,10 @@ const linkedinLabel = computed(() =>
     .replace(/\/$/, '')
 )
 
+const githubLabel = computed(() =>
+  (props.data.person.github_url ?? '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+)
+
 // Lien tel: sans espaces ni points pour être cliquable partout.
 const phoneHref = computed(() => 'tel:' + (props.data.person.phone ?? '').replace(/[^+\d]/g, ''))
 
@@ -147,13 +151,13 @@ const phoneHref = computed(() => 'tel:' + (props.data.person.phone ?? '').replac
             <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z" /></svg>
             <a class="cv-contact-link cv-contact-link--url" :href="data.person.linkedin_url">{{ linkedinLabel }}</a>
           </li>
+          <li v-if="data.person.github_url">
+            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z" /></svg>
+            <a class="cv-contact-link cv-contact-link--url" :href="data.person.github_url">{{ githubLabel }}</a>
+          </li>
           <li v-if="data.person.driver_license">
             <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" /></svg>
             <span>{{ data.person.driver_license }}</span>
-          </li>
-          <li v-if="data.person.birth_date">
-            <svg class="cv-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" /></svg>
-            <span>Né le {{ data.person.birth_date }}</span>
           </li>
         </ul>
       </section>

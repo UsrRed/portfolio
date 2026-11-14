@@ -12,7 +12,7 @@
 - Méthode non supportée → 405 ; OPTIONS → 200.
 
 ## Types (JSON)
-- Person: id, first_name, last_name, birth_date, driver_license, location, title, description, linkedin_url, image_url, email, phone
+- Person: id, first_name, last_name, driver_license, location, title, description, linkedin_url, github_url, image_url, email, phone
 - Domain: id, name, skills[]; Skill: id, domain_id, name, image_url, details
 - Language: id, name, level, image_url, certification_url
 - Hobby / SoftSkill: id, name, image_url
